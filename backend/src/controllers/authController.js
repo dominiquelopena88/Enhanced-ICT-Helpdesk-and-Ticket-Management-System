@@ -60,8 +60,74 @@ async function registerUser(req, res) {
     }
 }
 
+// Log in an existing user.
+async function loginUser(req, res) {
+    try {
+        // Get the user's login information
+        // from the request body.
+        const { email, password } = req.body;
+
+        // Check that both email and password were provided.
+        if (!email || !password) {
+            return res.status(400).json({
+                message: 'Email and password are required.'
+            });
+        }
+
+        // Find the user by email address.
+        const [users] = await pool.query(
+            'SELECT id, full_name, email, password_hash FROM users WHERE email = ?',
+            [email]
+        );
+
+        // If no user was found, the login details are invalid.
+        if (users.length === 0) {
+            return res.status(401).json({
+                message: 'Invalid email or password.'
+            });
+        }
+
+        // Get the user record from the database.
+        const user = users[0];
+
+        // Compare the password entered by the user
+        // with the hashed password stored in the database.
+        const passwordMatch = await bcrypt.compare(
+            password,
+            user.password_hash
+        );
+
+        // If the passwords do not match, reject the login.
+        if (!passwordMatch) {
+            return res.status(401).json({
+                message: 'Invalid email or password.'
+            });
+        }
+
+        // Login was successful.
+        return res.status(200).json({
+            message: 'Login successful.',
+            user: {
+                id: user.id,
+                full_name: user.full_name,
+                email: user.email
+            }
+        });
+
+    } catch (error) {
+        // Display the error in the backend terminal.
+        console.error('Login error:', error);
+
+        // Send a general error response to the employee.
+        return res.status(500).json({
+            message: 'An unexpected server error occurred.'
+        });
+    }
+}
+
 // Export the registration function
 // so the route can use it.
 module.exports = {
-    registerUser
+    registerUser,
+    loginUser
 };
