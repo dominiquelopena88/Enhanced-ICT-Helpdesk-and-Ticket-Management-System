@@ -33,7 +33,8 @@ async function registerUser(req, res) {
         }
 
         // Convert the plain-text password into a secure hash.
-        const passwordHash = await bcrypt.hash(password, 12);
+        const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS || 12);
+        const passwordHash = await bcrypt.hash(password, saltRounds);
 
         // Insert the new user into the database.
         const [result] = await pool.query(
