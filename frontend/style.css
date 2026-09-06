@@ -1,0 +1,224 @@
+/*
+    ============================================================
+    ENHANCED ICT HELPDESK - MAIN STYLESHEET
+    ============================================================
+
+    This file controls the visual appearance of the website.
+
+    Keeping the CSS separate from index.html means we can
+    redesign the website later without changing the backend
+    or the JavaScript functionality.
+*/
+
+
+/* ============================================================
+   1. BASIC PAGE SETTINGS
+   ============================================================ */
+
+/*
+    Apply box-sizing to all elements.
+
+    This makes width and height calculations easier to manage
+    when adding padding and borders.
+*/
+* {
+    box-sizing: border-box;
+}
+
+
+/*
+    Style the entire webpage body.
+*/
+body {
+    /* Remove the browser's default margin. */
+    margin: 0;
+
+    /* Use a simple, readable system font. */
+    font-family: Arial, sans-serif;
+
+    /* Light background for the application. */
+    background-color: #f4f6f8;
+
+    /* Default text colour. */
+    color: #333;
+}
+
+
+/* ============================================================
+   2. MAIN CONTAINER
+   ============================================================ */
+
+/*
+    The container holds the main login and ticket sections.
+
+    max-width prevents the content from becoming too wide
+    on large computer screens.
+*/
+.container {
+    max-width: 900px;
+
+    /* Centre the container horizontally. */
+    margin: 40px auto;
+
+    /* Space inside the container. */
+    padding: 30px;
+
+    /* White background for the main application area. */
+    background-color: white;
+
+    /* Slightly rounded corners. */
+    border-radius: 10px;
+
+    /* Subtle shadow around the application. */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+
+/* ============================================================
+   3. PAGE HEADING
+   ============================================================ */
+
+h1 {
+    /* Remove unnecessary top spacing. */
+    margin-top: 0;
+
+    /* Centre the main heading. */
+    text-align: center;
+}
+
+h2 {
+    margin-bottom: 20px;
+}
+
+
+/* ============================================================
+   4. LOGIN SECTION
+   ============================================================ */
+
+#loginSection {
+    /*
+        Limit the login form width so that it does not
+        become unnecessarily wide on desktop screens.
+    */
+    max-width: 500px;
+
+    /* Centre the login section. */
+    margin: 30px auto;
+}
+
+
+/*
+    Arrange form elements vertically.
+*/
+#loginForm {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+
+/*
+    Make labels easier to read.
+*/
+label {
+    font-weight: bold;
+}
+
+
+/*
+    Style the email and password fields.
+*/
+input {
+    padding: 10px;
+
+    border: 1px solid #ccc;
+
+    border-radius: 5px;
+
+    font-size: 16px;
+}
+
+
+/* ============================================================
+   5. BUTTONS
+   ============================================================ */
+
+button {
+    padding: 10px 16px;
+
+    border: none;
+
+    border-radius: 5px;
+
+    cursor: pointer;
+
+    font-size: 16px;
+}
+
+
+/*
+    Add spacing above the login button.
+*/
+#loginForm button {
+    margin-top: 10px;
+}
+
+
+/* ============================================================
+   6. LOGIN MESSAGE
+   ============================================================ */
+
+#loginMessage {
+    margin-top: 15px;
+
+    font-weight: bold;
+}
+
+
+/* ============================================================
+   7. MY TICKETS SECTION
+   ============================================================ */
+
+#ticketsSection {
+    margin-top: 30px;
+}
+
+
+/*
+    Container where JavaScript will eventually insert
+    the employee's tickets.
+*/
+#ticketsContainer {
+    margin-top: 20px;
+}
+
+
+/* ============================================================
+   8. RESPONSIVE DESIGN
+   ============================================================ */
+
+/*
+    These rules apply when the screen is relatively small,
+    such as a mobile phone or small tablet.
+*/
+@media (max-width: 600px) {
+
+    .container {
+        /*
+            Reduce the spacing on smaller screens.
+        */
+        margin: 20px;
+
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 26px;
+    }
+
+    h2 {
+        font-size: 21px;
+    }
+}
