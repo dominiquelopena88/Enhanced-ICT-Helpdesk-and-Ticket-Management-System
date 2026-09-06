@@ -4,6 +4,9 @@ const pool = require('../config/database');
 // Import bcrypt for securely hashing passwords.
 const bcrypt = require('bcrypt');
 
+// Import jsonwebtoken for creating access tokens.
+const jwt = require('jsonwebtoken');
+
 // Register a new user.
 async function registerUser(req, res) {
     try {
@@ -76,7 +79,7 @@ async function loginUser(req, res) {
 
         // Find the user by email address.
         const [users] = await pool.query(
-            'SELECT id, full_name, email, password_hash FROM users WHERE email = ?',
+            'SELECT id, full_name, email, password_hash, role FROM users WHERE email = ?',
             [email]
         );
 
@@ -104,13 +107,28 @@ async function loginUser(req, res) {
             });
         }
 
+        // Create a JWT containing the authenticated user's information.
+        const token = jwt.sign(
+            {
+                id: user.id,
+                email: user.email,
+                role: user.role
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: '1h'
+            }
+);
+
         // Login was successful.
         return res.status(200).json({
             message: 'Login successful.',
+            token: token,
             user: {
                 id: user.id,
                 full_name: user.full_name,
-                email: user.email
+                email: user.email,
+                role: user.role
             }
         });
 
