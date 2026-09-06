@@ -10,6 +10,9 @@ require('dotenv').config();
 // Import authentication routes.
 const authRoutes = require('./routes/authRoutes');
 
+// Import ticket routes.
+const ticketRoutes = require('./routes/ticketRoutes');
+
 // Import admin routes.
 const adminRoutes = require('./routes/adminRoutes');
 
@@ -26,6 +29,10 @@ app.use(express.json());
 // Register authentication routes.
 // All authentication routes will start with /api/auth.
 app.use('/api/auth', authRoutes);
+
+// Register ticket routes.
+// All ticket routes will start with /api/tickets.
+app.use('/api/tickets', ticketRoutes);
 
 // Register admin routes.
 // All admin routes will start with /api/admin.
