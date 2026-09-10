@@ -44,6 +44,44 @@ async function createTicket(req, res) {
     }
 }
 
+// Get all tickets submitted by the logged-in user.
+async function getMyTickets(req, res) {
+    try {
+        // Get the authenticated user's ID from the JWT.
+        const userId = req.user.id;
+
+        // Retrieve only tickets belonging to the logged-in user.
+        const [tickets] = await pool.query(
+            `SELECT
+                id,
+                subject,
+                description,
+                category,
+                priority,
+                status,
+                created_at
+             FROM tickets
+             WHERE user_id = ?
+             ORDER BY created_at DESC, id DESC`,
+            [userId]
+        );
+
+        // Return the user's tickets.
+        return res.status(200).json({
+            message: 'Tickets retrieved successfully.',
+            tickets: tickets
+        });
+
+    } catch (error) {
+        console.error('Get my tickets error:', error);
+
+        return res.status(500).json({
+            message: 'Server error while retrieving tickets.'
+        });
+    }
+}
+
 module.exports = {
-    createTicket
+    createTicket,
+    getMyTickets
 };

@@ -1,0 +1,455 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <!--
+        Makes the website responsive on phones, tablets,
+        and desktop screens.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Browser tab title -->
+    <title>Enhanced ICT Helpdesk</title>
+
+    <!--
+        Connect this HTML page to our external CSS file.
+
+        Keeping CSS separate means we can redesign the
+        appearance later without changing the application logic.
+    -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+
+<body>
+
+    <!--
+        =========================================================
+        MAIN APPLICATION CONTAINER
+        =========================================================
+
+        This container holds the different screens of the
+        application:
+
+        1. Login
+        2. Registration
+        3. My Tickets
+
+        JavaScript controls which section is visible.
+    -->
+    <main class="container">
+
+
+        <!-- =====================================================
+             WEBSITE HEADER
+             =====================================================
+
+             This is always displayed at the top of the page
+             while the user is not logged in.
+        -->
+
+        <header class="page-header">
+
+            <h1>
+                Enhanced ICT Helpdesk
+            </h1>
+
+            <p>
+                ICT Helpdesk and Ticket Management System
+            </p>
+
+        </header>
+
+
+        <!-- =====================================================
+             LOGIN SECTION
+             =====================================================
+
+             IMPORTANT:
+
+             Login is now the DEFAULT screen.
+
+             The user will see this section first when opening
+             the website.
+
+             If the user does not have an account, they can
+             click the Register button below the login form.
+
+             The ID names below MUST remain unchanged because
+             frontend/app.js uses them to find these elements.
+        -->
+
+        <section
+            id="loginSection"
+            class="auth-section"
+            aria-labelledby="loginHeading"
+        >
+
+            <h2 id="loginHeading">
+                Welcome Back
+            </h2>
+
+            <p class="section-description">
+                Log in to access your ICT support tickets.
+            </p>
+
+
+            <!--
+                LOGIN FORM
+
+                JavaScript listens for the submit event and sends
+                the email and password to:
+
+                POST /api/auth/login
+
+                The backend then:
+
+                1. Finds the user.
+                2. Checks the password using bcrypt.
+                3. Creates a JWT.
+                4. Sends the token back to this frontend.
+            -->
+            <form id="loginForm">
+
+                <!-- Email field -->
+                <div class="form-group">
+
+                    <label for="email">
+                        Email
+                    </label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="Enter your email"
+                        autocomplete="username"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- Password field -->
+                <div class="form-group">
+
+                    <label for="password">
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Enter your password"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- Login button -->
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    Login
+                </button>
+
+            </form>
+
+
+            <!--
+                JavaScript displays login success or error
+                messages in this paragraph.
+            -->
+            <p
+                id="loginMessage"
+                class="form-message"
+                aria-live="polite"
+            ></p>
+
+
+            <!--
+                REGISTRATION LINK
+
+                This does NOT submit a form.
+
+                app.js listens for this button and changes
+                the visible section from Login to Registration.
+            -->
+            <div class="switch-auth">
+
+                <p>
+                    Don't have an account?
+                </p>
+
+                <button
+                    type="button"
+                    id="showRegistrationButton"
+                    class="secondary-button"
+                >
+                    Create an account
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             REGISTRATION SECTION
+             =====================================================
+
+             This section starts HIDDEN.
+
+             It becomes visible when the user clicks:
+
+             "Create an account"
+
+             Registration sends information to:
+
+             POST /api/auth/register
+
+             The backend then hashes the password with bcrypt
+             before storing the account in MySQL.
+
+             Role is intentionally NOT included in this form.
+
+             New public registrations are treated as employees.
+             Admin accounts should be managed separately rather
+             than allowing anyone to register themselves as admin.
+        -->
+
+        <section
+            id="registrationSection"
+            class="auth-section"
+            aria-labelledby="registrationHeading"
+            hidden
+        >
+
+            <h2 id="registrationHeading">
+                Create Employee Account
+            </h2>
+
+            <p class="section-description">
+                Register an account to submit and manage your
+                ICT support tickets.
+            </p>
+
+
+            <!-- Registration form -->
+            <form id="registrationForm" autocomplete="off">
+
+                <!-- Full name -->
+                <div class="form-group">
+
+                    <label for="registerFullName">
+                        Full Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="registerFullName"
+                        name="full_name"
+                        placeholder="Enter your full name"
+                        autocomplete="name"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- Email -->
+                <div class="form-group">
+
+                    <label for="registerEmail">
+                        Email
+                    </label>
+
+                    <input
+                        type="email"
+                        id="registerEmail"
+                        name="email"
+                        placeholder="Enter your email"
+                        autocomplete="email"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- Password -->
+                <div class="form-group">
+
+                    <label for="registerPassword">
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        id="registerPassword"
+                        name="password"
+                        placeholder="Create a password"
+                        autocomplete="new-password"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- Register button -->
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    Register
+                </button>
+
+            </form>
+
+
+            <!--
+                JavaScript displays registration success or
+                error messages here.
+            -->
+            <p
+                id="registrationMessage"
+                class="form-message"
+                aria-live="polite"
+            ></p>
+
+
+            <!--
+                Button to return to Login.
+
+                app.js listens for this button.
+            -->
+            <div class="switch-auth">
+
+                <p>
+                    Already have an account?
+                </p>
+
+                <button
+                    type="button"
+                    id="showLoginButton"
+                    class="secondary-button"
+                >
+                    Back to Login
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             MY TICKETS SECTION
+             =====================================================
+
+             This section starts hidden.
+
+             It becomes visible after successful login.
+
+             JavaScript requests the employee's tickets from:
+
+             GET /api/tickets
+
+             The JWT token is placed in the Authorization header.
+
+             The backend then uses the logged-in user's ID to
+             return only that employee's tickets.
+        -->
+
+        <section
+            id="ticketsSection"
+            class="tickets-section"
+            aria-labelledby="ticketsHeading"
+            hidden
+        >
+
+            <div class="tickets-header">
+
+                <div>
+
+                    <h2 id="ticketsHeading">
+                        My Tickets
+                    </h2>
+
+                    <p>
+                        View the ICT support tickets submitted
+                        from your account.
+                    </p>
+
+                </div>
+
+
+                <!--
+                    Logout removes the JWT from localStorage
+                    and returns the user to the Login screen.
+                -->
+                <button
+                    id="logoutButton"
+                    type="button"
+                    class="secondary-button"
+                >
+                    Logout
+                </button>
+
+            </div>
+
+
+            <!--
+                JavaScript displays loading, success, and
+                error messages here.
+            -->
+            <p
+                id="ticketsMessage"
+                class="form-message"
+                aria-live="polite"
+            ></p>
+
+
+            <!--
+                JavaScript dynamically creates ticket cards
+                and inserts them inside this container.
+            -->
+            <div id="ticketsContainer"></div>
+
+        </section>
+
+    </main>
+
+
+    <!--
+        =========================================================
+        FRONTEND JAVASCRIPT
+        =========================================================
+
+        Load app.js after the HTML.
+
+        This is important because app.js uses:
+
+            document.getElementById()
+
+        to find elements such as:
+
+            loginForm
+            registrationForm
+            ticketsContainer
+            logoutButton
+
+        All those elements have already been created above
+        before JavaScript starts running.
+    -->
+    <script src="app.js"></script>
+
+</body>
+
+</html>
+```
