@@ -6,6 +6,30 @@ const {
     authorizeRoles
 } = require('../middleware/authMiddleware');
 
+const {
+    getAllUsers,
+    updateUserRole
+} = require('../controllers/adminController');
+
+
+// Admin views all users.
+router.get(
+    '/users',
+    authenticateToken,
+    authorizeRoles('admin'),
+    getAllUsers
+);
+
+
+// Admin updates a user's role.
+router.put(
+    '/users/:id/role',
+    authenticateToken,
+    authorizeRoles('admin'),
+    updateUserRole
+);
+
+
 // Test endpoint for admin-only access.
 router.get(
     '/test',
