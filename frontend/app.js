@@ -1,814 +1,3964 @@
 /*
     ============================================================
-    ENHANCED ICT HELPDESK - FRONTEND JAVASCRIPT
+    ENHANCED ICT HELPDESK
+    FRONTEND JAVASCRIPT
     ============================================================
-
-    This file controls the behaviour of the frontend.
-
-    It is responsible for:
-
-    1. Handling employee login.
-    2. Sending login information to the backend.
-    3. Storing the JWT authentication token.
-    4. Requesting the employee's tickets.
-    5. Displaying the tickets on the webpage.
-    6. Logging the employee out.
-
-    The frontend communicates with the Node.js + Express
-    backend through HTTP API requests.
 */
 
-
-/* ============================================================
-   1. BACKEND API URL
-   ============================================================ */
-
-/*
-    The backend server is currently running locally on:
-
-    http://localhost:3000
-
-    The API endpoints are:
-
-    POST /api/auth/login
-        Used to authenticate the employee.
-
-    GET /api/tickets
-        Used to retrieve the employee's tickets.
-*/
-const API_BASE_URL = 'http://localhost:3000/api';
 
 /*
     ============================================================
-    REGISTRATION FORM ELEMENTS
+    API CONFIGURATION
     ============================================================
-
-    These variables connect JavaScript to the registration
-    elements that we added to index.html.
-
-    JavaScript needs these references so it can:
-    
-    1. Read the employee's registration information.
-    2. Send that information to the backend.
-    3. Display the registration result.
 */
 
-
-// Find the registration form in index.html.
-const registrationForm =
-    document.getElementById('registrationForm');
-
-
-// Find the full-name input field.
-const registerFullName =
-    document.getElementById('registerFullName');
-
-
-// Find the registration email input field.
-const registerEmail =
-    document.getElementById('registerEmail');
-
-
-// Find the registration password input field.
-const registerPassword =
-    document.getElementById('registerPassword');
-
-
-// Find the paragraph used to display registration messages.
-const registrationMessage =
-    document.getElementById('registrationMessage');
-
-
-// Find the button used to switch from registration to login.
-const showLoginButton =
-    document.getElementById('showLoginButton');
-
-
-// Find the button used to switch from login to registration.
-const showRegistrationButton =
-    document.getElementById('showRegistrationButton');
-
-
-/* ============================================================
-   2. GET HTML ELEMENTS
-   ============================================================ */
-
-/*
-    Find the login form in index.html.
-
-    We use document.getElementById() to access an HTML
-    element using its id.
-*/
-const loginForm = document.getElementById('loginForm');
+const API_BASE_URL = '/api';
 
 
 /*
-    Find the email input field.
+    ============================================================
+    SESSION MANAGEMENT
+    ============================================================
 */
-const emailInput = document.getElementById('email');
+
+function saveSession(token, user) {
+
+    localStorage.setItem(
+        'token',
+        token
+    );
+
+    localStorage.setItem(
+        'user',
+        JSON.stringify(user)
+    );
+}
+
+
+function getToken() {
+
+    return localStorage.getItem('token');
+}
+
+
+function getUser() {
+
+    const savedUser =
+        localStorage.getItem('user');
+
+    if (!savedUser) {
+        return null;
+    }
+
+    try {
+
+        return JSON.parse(savedUser);
+
+    } catch (error) {
+
+        return null;
+    }
+}
+
+
+function clearSession() {
+
+    localStorage.removeItem('token');
+
+    localStorage.removeItem('user');
+}
 
 
 /*
-    Find the password input field.
+    ============================================================
+    HTML SAFETY
+    ============================================================
 */
-const passwordInput = document.getElementById('password');
+
+function escapeHtml(value) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return '';
+    }
+
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 
 /*
-    Find the paragraph used to display login messages.
+    ============================================================
+    API REQUEST HELPER
+    ============================================================
 */
-const loginMessage = document.getElementById('loginMessage');
+
+async function apiRequest(
+    endpoint,
+    options = {}
+) {
+
+    const token =
+        getToken();
+
+    const headers = {
+        ...(options.body
+            ? {
+                'Content-Type':
+                    'application/json'
+            }
+            : {})
+    };
+
+
+    if (token) {
+
+        headers.Authorization =
+            `Bearer ${token}`;
+    }
+
+
+    let response;
+
+    try {
+
+        response =
+            await fetch(
+                `${API_BASE_URL}${endpoint}`,
+                {
+                    ...options,
+
+                    headers: {
+                        ...headers,
+                        ...(options.headers || {})
+                    }
+                }
+            );
+
+    } catch (error) {
+
+        throw new Error(
+            'Unable to connect to the server. Please make sure the system is running.'
+        );
+    }
+
+
+    const responseText =
+        await response.text();
+
+    let data = {};
+
+
+    if (responseText) {
+
+        try {
+
+            data =
+                JSON.parse(responseText);
+
+        } catch (error) {
+
+            data = {
+                message:
+                    responseText
+            };
+        }
+    }
+
+
+    if (!response.ok) {
+
+        const error =
+            new Error(
+                data.message ||
+                data.error ||
+                `Request failed with status ${response.status}.`
+            );
+
+        error.status =
+            response.status;
+
+        throw error;
+    }
+
+
+    return data;
+}
+
 
 /*
-    Find the paragraph used to display messages
-    related to the My Tickets section.
+    ============================================================
+    ELEMENTS
+    ============================================================
 */
-const ticketsMessage = document.getElementById('ticketsMessage');
+
 
 /*
-    Find the registration section.
-
-    This section contains the employee registration form.
+    ------------------------------------------------------------
+    LOGIN
+    ------------------------------------------------------------
 */
+
+const loginSection =
+    document.getElementById(
+        'loginSection'
+    );
+
+const loginForm =
+    document.getElementById(
+        'loginForm'
+    );
+
+const loginEmail =
+    document.getElementById(
+        'loginEmail'
+    );
+
+const loginPassword =
+    document.getElementById(
+        'loginPassword'
+    );
+
+const loginMessage =
+    document.getElementById(
+        'loginMessage'
+    );
+
+
+/*
+    ------------------------------------------------------------
+    REGISTRATION
+    ------------------------------------------------------------
+*/
+
 const registrationSection =
-    document.getElementById('registrationSection');
+    document.getElementById(
+        'registrationSection'
+    );
 
-/* ============================================================
-   SWITCH BETWEEN REGISTRATION AND LOGIN
-   ============================================================ */
+const registrationForm =
+    document.getElementById(
+        'registrationForm'
+    );
 
-/*
-    When the employee clicks "Login" from the registration
-    section, hide registration and show login.
-*/
-showLoginButton.addEventListener('click', function () {
+const registerName =
+    document.getElementById(
+        'registerName'
+    );
 
-    registrationSection.hidden = true;
+const registerEmail =
+    document.getElementById(
+        'registerEmail'
+    );
 
-    loginSection.hidden = false;
+const registerPassword =
+    document.getElementById(
+        'registerPassword'
+    );
 
-    registrationMessage.textContent = '';
-});
+const registrationMessage =
+    document.getElementById(
+        'registrationMessage'
+    );
 
+const showRegistrationButton =
+    document.getElementById(
+        'showRegistrationButton'
+    );
 
-/*
-    When the employee clicks "Register" from the login
-    section, hide login and show registration.
-*/
-showRegistrationButton.addEventListener('click', function () {
-
-    // Clear anything previously typed into the login form.
-    loginForm.reset();
-
-    // Clear any previous login message.
-    loginMessage.textContent = '';
-
-    // Hide the login section.
-    loginSection.hidden = true;
-
-    // Show the registration section.
-    registrationSection.hidden = false;
-});
-
-/*
-    Find the login section.
-
-    This section will be hidden after successful login.
-*/
-const loginSection = document.getElementById('loginSection');
+const showLoginButton =
+    document.getElementById(
+        'showLoginButton'
+    );
 
 
 /*
-    Find the My Tickets section.
-
-    This section starts hidden in index.html.
+    ------------------------------------------------------------
+    EMPLOYEE
+    ------------------------------------------------------------
 */
-const ticketsSection = document.getElementById('ticketsSection');
+
+const employeeSection =
+    document.getElementById(
+        'employeeSection'
+    );
+
+const employeeWelcome =
+    document.getElementById(
+        'employeeWelcome'
+    );
+
+const logoutButton =
+    document.getElementById(
+        'logoutButton'
+    );
+
+const dashboardSection =
+    document.getElementById(
+        'dashboardSection'
+    );
+
+const submitTicketSection =
+    document.getElementById(
+        'submitTicketSection'
+    );
+
+const myTicketsSection =
+    document.getElementById(
+        'myTicketsSection'
+    );
+
+const trackTicketSection =
+    document.getElementById(
+        'trackTicketSection'
+    );
 
 
 /*
-    Find the container where tickets will be displayed.
+    ------------------------------------------------------------
+    EMPLOYEE COUNTERS
+    ------------------------------------------------------------
 */
-const ticketsContainer = document.getElementById('ticketsContainer');
+
+const totalTicketsCount =
+    document.getElementById(
+        'totalTicketsCount'
+    );
+
+const openTicketsCount =
+    document.getElementById(
+        'openTicketsCount'
+    );
+
+const inProgressTicketsCount =
+    document.getElementById(
+        'inProgressTicketsCount'
+    );
+
+const resolvedTicketsCount =
+    document.getElementById(
+        'resolvedTicketsCount'
+    );
 
 
 /*
-    Find the logout button.
+    ------------------------------------------------------------
+    EMPLOYEE BUTTONS
+    ------------------------------------------------------------
 */
-const logoutButton = document.getElementById('logoutButton');
 
-/* ============================================================
-   REGISTRATION FORM EVENT
-   ============================================================ */
+const showSubmitTicketButton =
+    document.getElementById(
+        'showSubmitTicketButton'
+    );
+
+const showMyTicketsButton =
+    document.getElementById(
+        'showMyTicketsButton'
+    );
+
+const showTrackTicketButton =
+    document.getElementById(
+        'showTrackTicketButton'
+    );
+
+const backToEmployeeDashboardButton =
+    document.getElementById(
+        'backToEmployeeDashboardButton'
+    );
+
+const backFromMyTicketsButton =
+    document.getElementById(
+        'backFromMyTicketsButton'
+    );
+
+const backFromTrackTicketButton =
+    document.getElementById(
+        'backFromTrackTicketButton'
+    );
+
 
 /*
-    Listen for the employee submitting the registration form.
-
-    When the Register button is clicked, this function will:
-
-    1. Stop the browser from refreshing the page.
-    2. Read the registration information.
-    3. Send the information to the backend API.
-    4. Wait for the backend response.
-    5. Display the registration result.
+    ------------------------------------------------------------
+    TICKET FORM
+    ------------------------------------------------------------
 */
-registrationForm.addEventListener('submit', async function (event) {
 
-    /*
-        Prevent the browser's default form submission.
+const ticketForm =
+    document.getElementById(
+        'ticketForm'
+    );
 
-        Without this, the browser would reload the webpage.
-    */
-    event.preventDefault();
+const ticketTitle =
+    document.getElementById(
+        'ticketTitle'
+    );
 
+const ticketCategory =
+    document.getElementById(
+        'ticketCategory'
+    );
 
-    /*
-        Read the values entered by the employee.
+const ticketDescription =
+    document.getElementById(
+        'ticketDescription'
+    );
 
-        trim() removes unnecessary spaces from the beginning
-        and end of the name and email.
-    */
-    const fullName = registerFullName.value.trim();
-
-    const email = registerEmail.value.trim();
-
-    const password = registerPassword.value;
-
-
-    /*
-        Display a temporary message while the registration
-        request is being processed.
-    */
-    registrationMessage.textContent =
-        'Creating your account...';
+const ticketMessage =
+    document.getElementById(
+        'ticketMessage'
+    );
 
 
-    try {
+/*
+    ------------------------------------------------------------
+    MY TICKETS
+    ------------------------------------------------------------
+*/
 
-        /*
-            Send the registration information to the backend.
-
-            The backend endpoint is:
-
-            POST /api/auth/register
-
-            This matches the route defined in:
-
-            backend/src/routes/authRoutes.js
-        */
-        const response = await fetch(
-            `${API_BASE_URL}/auth/register`,
-            {
-                method: 'POST',
-
-                /*
-                    Tell Express that we are sending JSON data.
-                */
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-
-                /*
-                    Convert the JavaScript object into JSON.
-
-                    These property names MUST match the backend:
-
-                    full_name
-                    email
-                    password
-                */
-                body: JSON.stringify({
-                    full_name: fullName,
-                    email: email,
-                    password: password
-                })
-            }
-        );
+const myTicketsTableBody =
+    document.getElementById(
+        'myTicketsTableBody'
+    );
 
 
-        /*
-            Convert the backend response from JSON text
-            into a JavaScript object.
-        */
-        const data = await response.json();
+/*
+    ------------------------------------------------------------
+    TRACK TICKET
+    ------------------------------------------------------------
+*/
+
+const trackTicketForm =
+    document.getElementById(
+        'trackTicketForm'
+    );
+
+const trackTicketId =
+    document.getElementById(
+        'trackTicketId'
+    );
+
+const trackTicketMessage =
+    document.getElementById(
+        'trackTicketMessage'
+    );
+
+const trackedTicketResult =
+    document.getElementById(
+        'trackedTicketResult'
+    );
 
 
-        /*
-            Check whether registration was successful.
+/*
+    ------------------------------------------------------------
+    ACCESSIBILITY
+    ------------------------------------------------------------
+*/
 
-            response.ok is true for successful HTTP responses.
-        */
-        if (!response.ok) {
+const accessibilityButton =
+    document.getElementById(
+        'accessibilityButton'
+    );
 
-            /*
-                Display the error message returned by
-                the backend.
+const accessibilityPanel =
+    document.getElementById(
+        'accessibilityPanel'
+    );
 
-                Example:
+const decreaseTextButton =
+    document.getElementById(
+        'decreaseTextButton'
+    );
 
-                "Email address is already registered"
-            */
-            registrationMessage.textContent =
-                data.message || 'Registration failed.';
+const resetTextButton =
+    document.getElementById(
+        'resetTextButton'
+    );
 
-            return;
-        }
+const increaseTextButton =
+    document.getElementById(
+        'increaseTextButton'
+    );
+
+const contrastButton =
+    document.getElementById(
+        'contrastButton'
+    );
+
+const resetAccessibilityButton =
+    document.getElementById(
+        'resetAccessibilityButton'
+    );
 
 
-        /*
-            Registration was successful.
-        */
-        registrationMessage.textContent =
-            'Account created successfully!';
+/*
+    ------------------------------------------------------------
+    TECHNICIAN
+    ------------------------------------------------------------
+*/
+
+const technicianSection =
+    document.getElementById(
+        'technicianSection'
+    );
+
+const technicianWelcome =
+    document.getElementById(
+        'technicianWelcome'
+    );
+
+const technicianLogoutButton =
+    document.getElementById(
+        'technicianLogoutButton'
+    );
+
+const technicianAssignedCount =
+    document.getElementById(
+        'technicianAssignedCount'
+    );
+
+const technicianOpenCount =
+    document.getElementById(
+        'technicianOpenCount'
+    );
+
+const technicianInProgressCount =
+    document.getElementById(
+        'technicianInProgressCount'
+    );
+
+const technicianResolvedCount =
+    document.getElementById(
+        'technicianResolvedCount'
+    );
+
+const technicianTicketsTableBody =
+    document.getElementById(
+        'technicianTicketsTableBody'
+    );
+
+const refreshTechnicianTicketsButton =
+    document.getElementById(
+        'refreshTechnicianTicketsButton'
+    );
+
+const technicianTicketDetailsSection =
+    document.getElementById(
+        'technicianTicketDetailsSection'
+    );
+
+const technicianTicketDetails =
+    document.getElementById(
+        'technicianTicketDetails'
+    );
+
+const backToTechnicianDashboardButton =
+    document.getElementById(
+        'backToTechnicianDashboardButton'
+    );
+
+const technicianUpdateTicketForm =
+    document.getElementById(
+        'technicianUpdateTicketForm'
+    );
+
+const technicianTicketStatus =
+    document.getElementById(
+        'technicianTicketStatus'
+    );
+
+const technicianTicketComment =
+    document.getElementById(
+        'technicianTicketComment'
+    );
+
+const technicianUpdateMessage =
+    document.getElementById(
+        'technicianUpdateMessage'
+    );
+
+const technicianTicketMessage =
+    document.getElementById(
+        'technicianTicketMessage'
+    );
 
 
-        /*
-            Clear the registration form after success.
-        */
-        registrationForm.reset();
+/*
+    ------------------------------------------------------------
+    ADMIN
+    ------------------------------------------------------------
+*/
+
+const adminSection =
+    document.getElementById(
+        'adminSection'
+    );
+
+const adminWelcome =
+    document.getElementById(
+        'adminWelcome'
+    );
+
+const adminLogoutButton =
+    document.getElementById(
+        'adminLogoutButton'
+    );
+
+const adminTotalUsersCount =
+    document.getElementById(
+        'adminTotalUsersCount'
+    );
+
+const adminEmployeeCount =
+    document.getElementById(
+        'adminEmployeeCount'
+    );
+
+const adminTechnicianCount =
+    document.getElementById(
+        'adminTechnicianCount'
+    );
+
+const adminTicketCount =
+    document.getElementById(
+        'adminTicketCount'
+    );
+
+const adminUsersContainer =
+    document.getElementById(
+        'adminUsersContainer'
+    );
+
+const adminTechniciansContainer =
+    document.getElementById(
+        'adminTechniciansContainer'
+    );
+
+const adminTicketsContainer =
+    document.getElementById(
+        'adminTicketsContainer'
+    );
+
+const adminTicketsSection =
+    document.getElementById(
+        'adminTicketsSection'
+    );
 
 
-        /*
-            After successful registration, switch the user
-            to the login section.
+/*
+    ============================================================
+    DISPLAY HELPERS
+    ============================================================
+*/
 
-            We wait briefly so the employee can see the
-            success message first.
-        */
-        setTimeout(function () {
+function hideElement(element) {
 
-            registrationSection.hidden = true;
-
-            loginSection.hidden = false;
-
-            loginMessage.textContent =
-                'Registration successful. Please log in.';
-
-        }, 1000);
-
-    } catch (error) {
-
-        /*
-            This catches network errors.
-
-            For example, if the Node.js backend is not running.
-        */
-        console.error(
-            'Registration request error:',
-            error
-        );
-
-        registrationMessage.textContent =
-            'Unable to connect to the backend server.';
+    if (!element) {
+        return;
     }
-});
 
-/* ============================================================
-   3. LOGIN FORM EVENT
-   ============================================================ */
+    element.style.display =
+        'none';
+}
+
+
+function showElement(
+    element,
+    display = 'block'
+) {
+
+    if (!element) {
+        return;
+    }
+
+    element.style.display =
+        display;
+}
+
+
+function hideAllSections() {
+
+    hideElement(loginSection);
+
+    hideElement(registrationSection);
+
+    hideElement(employeeSection);
+
+    hideElement(technicianSection);
+
+    hideElement(adminSection);
+}
+
 
 /*
-    Listen for the employee submitting the login form.
-
-    preventDefault() stops the browser from refreshing the
-    page when the form is submitted.
+    ============================================================
+    LOGIN / REGISTRATION NAVIGATION
+    ============================================================
 */
-loginForm.addEventListener('submit', async function (event) {
 
-    event.preventDefault();
+function showLogin() {
 
+    hideAllSections();
 
-    /*
-        Get the values entered by the employee.
-    */
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-
-
-    /*
-        Display a temporary message while the login request
-        is being processed.
-    */
-    loginMessage.textContent = 'Logging in...';
+    showElement(
+        loginSection
+    );
+}
 
 
-    try {
+function showRegistration() {
 
-        /*
-            Send the login information to the backend.
+    hideAllSections();
 
-            fetch() is used to communicate with the REST API.
-        */
-        const response = await fetch(
-            `${API_BASE_URL}/auth/login`,
-            {
-                method: 'POST',
+    showElement(
+        registrationSection
+    );
+}
 
-                headers: {
-                    'Content-Type': 'application/json'
-                },
 
-                body: JSON.stringify({
-                    email: email,
-                    password: password
-                })
+if (showRegistrationButton) {
+
+    showRegistrationButton.addEventListener(
+        'click',
+        showRegistration
+    );
+}
+
+
+if (showLoginButton) {
+
+    showLoginButton.addEventListener(
+        'click',
+        showLogin
+    );
+}
+
+
+/*
+    ============================================================
+    LOGIN
+    ============================================================
+*/
+
+if (loginForm) {
+
+    loginForm.addEventListener(
+        'submit',
+        async function (event) {
+
+            event.preventDefault();
+
+
+            if (loginMessage) {
+
+                loginMessage.textContent =
+                    'Logging in...';
             }
+
+
+            try {
+
+                const data =
+                    await apiRequest(
+                        '/auth/login',
+                        {
+                            method: 'POST',
+
+                            body:
+                                JSON.stringify({
+                                    email:
+                                        loginEmail.value.trim(),
+
+                                    password:
+                                        loginPassword.value
+                                })
+                        }
+                    );
+
+
+                const token =
+                    data.token ||
+                    data.accessToken ||
+                    data.access_token;
+
+
+                if (!token) {
+
+                    throw new Error(
+                        'Login succeeded but no authentication token was returned.'
+                    );
+                }
+
+
+                const user =
+                    data.user || {
+                        id:
+                            data.id,
+
+                        full_name:
+                            data.full_name,
+
+                        email:
+                            data.email,
+
+                        role:
+                            data.role
+                    };
+
+
+                saveSession(
+                    token,
+                    user
+                );
+
+
+                if (loginMessage) {
+
+                    loginMessage.textContent =
+                        '';
+                }
+
+
+                loginForm.reset();
+
+
+                handleLoginByRole(
+                    user
+                );
+
+            } catch (error) {
+
+                if (loginMessage) {
+
+                    loginMessage.textContent =
+                        error.message ||
+                        'Login failed.';
+                }
+            }
+        }
+    );
+}
+
+
+/*
+    ============================================================
+    ROLE-BASED ACCESS
+    ============================================================
+*/
+
+function handleLoginByRole(user) {
+
+    hideAllSections();
+
+
+    /*
+        --------------------------------------------------------
+        EMPLOYEE
+        --------------------------------------------------------
+    */
+
+    if (
+        user.role ===
+        'employee'
+    ) {
+
+        showElement(
+            employeeSection
         );
 
 
-        /*
-            Convert the backend response from JSON text
-            into a JavaScript object.
-        */
-        const data = await response.json();
+        if (employeeWelcome) {
 
+            employeeWelcome.innerHTML = `
+                <span class="welcome-label">
+                    Welcome back
+                </span>
 
-        /*
-            Check whether the backend accepted the login.
-        */
-        if (!response.ok) {
+                <span class="user-role">
+                    Employee
+                </span>
 
-            /*
-                Display the error message returned by
-                the backend.
-            */
-            loginMessage.textContent =
-                data.message || 'Login failed.';
-
-            return;
+                <span class="user-name">
+                    ${escapeHtml(
+                        user.full_name ||
+                        user.email
+                    )}
+                </span>
+            `;
         }
 
 
-        /*
-            The backend should return a JWT token after
-            successful authentication.
-
-            Example:
-
-            {
-                "message": "Login successful.",
-                "token": "eyJ..."
-            }
-        */
-        const token = data.token;
-
-
-        /*
-            Make sure a token was actually returned.
-        */
-        if (!token) {
-
-            loginMessage.textContent =
-                'Login failed: no authentication token received.';
-
-            return;
-        }
-
-
-        /*
-            Store the JWT token in the browser.
-
-            localStorage allows the token to remain available
-            when JavaScript needs to make authenticated requests.
-        */
-        localStorage.setItem('authToken', token);
-
-
-        /*
-            Tell the employee that login was successful.
-        */
-        loginMessage.textContent = 'Login successful.';
-
-
-        /*
-            Hide the login section.
-        */
-        loginSection.hidden = true;
-
-
-        /*
-            Show the My Tickets section.
-        */
-        ticketsSection.hidden = false;
-
-
-        /*
-            Load the employee's tickets immediately after login.
-        */
-        loadMyTickets();
-
-    } catch (error) {
-
-        /*
-            This handles network errors, such as the backend
-            server not running.
-        */
-        console.error('Login request error:', error);
-
-        loginMessage.textContent =
-            'Unable to connect to the backend server.';
-    }
-});
-
-
-/* ============================================================
-   4. LOAD MY TICKETS
-   ============================================================ */
-
-/*
-    Request all tickets belonging to the currently
-    authenticated employee.
-*/
-async function loadMyTickets() {
-
-    /*
-        Retrieve the JWT token stored during login.
-    */
-    const token = localStorage.getItem('authToken');
-
-
-    /*
-        If there is no token, the employee is not logged in.
-    */
-    if (!token) {
-
-        ticketsMessage.textContent =
-            'Please log in to view your tickets.';
+        showEmployeeDashboard();
 
         return;
     }
 
 
     /*
-        Display a temporary loading message.
+        --------------------------------------------------------
+        ICT TECHNICIAN
+        --------------------------------------------------------
     */
-    ticketsMessage.textContent = 'Loading tickets...';
+
+    if (
+        user.role ===
+        'ict_technician'
+    ) {
+
+        showElement(
+            technicianSection
+        );
+
+
+        if (technicianWelcome) {
+
+            technicianWelcome.innerHTML = `
+                <span class="welcome-label">
+                    Welcome back
+                </span>
+
+                <span class="user-role">
+                    ICT Technician
+                </span>
+
+                <span class="user-name">
+                    ${escapeHtml(
+                        user.full_name ||
+                        user.email
+                    )}
+                </span>
+            `;
+        }
+
+
+        loadTechnicianDashboard();
+
+        return;
+    }
+
+
+    /*
+        --------------------------------------------------------
+        ADMINISTRATOR
+        --------------------------------------------------------
+    */
+
+    if (
+        user.role ===
+        'administrator'
+    ) {
+
+        showElement(
+            adminSection
+        );
+
+
+        if (adminWelcome) {
+
+            adminWelcome.innerHTML = `
+                <span class="welcome-label">
+                    Welcome back
+                </span>
+
+                <span class="user-role">
+                    Administrator
+                </span>
+
+                <span class="user-name">
+                    ${escapeHtml(
+                        user.full_name ||
+                        user.email
+                    )}
+                </span>
+            `;
+        }
+
+
+        showAdminModule(
+            'dashboard'
+        );
+
+        return;
+    }
+
+
+    clearSession();
+
+    showLogin();
+
+
+    if (loginMessage) {
+
+        loginMessage.textContent =
+            'Unsupported user role.';
+    }
+}
+
+
+/*
+    ============================================================
+    REGISTRATION
+    ============================================================
+*/
+
+if (registrationForm) {
+
+    registrationForm.addEventListener(
+        'submit',
+        async function (event) {
+
+            event.preventDefault();
+
+
+            if (registrationMessage) {
+
+                registrationMessage.textContent =
+                    'Creating account...';
+            }
+
+
+            try {
+
+                await apiRequest(
+                    '/auth/register',
+                    {
+                        method: 'POST',
+
+                        body:
+                            JSON.stringify({
+
+                                full_name:
+                                    registerName.value.trim(),
+
+                                email:
+                                    registerEmail.value.trim(),
+
+                                password:
+                                    registerPassword.value
+                            })
+                    }
+                );
+
+
+                if (registrationMessage) {
+
+                    registrationMessage.textContent =
+                        'Registration successful. You can now log in.';
+                }
+
+
+                registrationForm.reset();
+
+            } catch (error) {
+
+                if (registrationMessage) {
+
+                    registrationMessage.textContent =
+                        error.message ||
+                        'Registration failed.';
+                }
+            }
+        }
+    );
+}
+
+
+/*
+    ============================================================
+    EMPLOYEE DASHBOARD
+    ============================================================
+*/
+
+function showEmployeeDashboard() {
+
+    hideElement(
+        submitTicketSection
+    );
+
+    hideElement(
+        myTicketsSection
+    );
+
+    hideElement(
+        trackTicketSection
+    );
+
+
+    showElement(
+        dashboardSection
+    );
+
+
+    loadMyTickets();
+}
+
+
+function showSubmitTicket() {
+
+    hideElement(
+        dashboardSection
+    );
+
+    hideElement(
+        myTicketsSection
+    );
+
+    hideElement(
+        trackTicketSection
+    );
+
+
+    showElement(
+        submitTicketSection
+    );
+
+
+    if (ticketMessage) {
+
+        ticketMessage.textContent =
+            '';
+    }
+}
+
+
+function showMyTickets() {
+
+    hideElement(
+        dashboardSection
+    );
+
+    hideElement(
+        submitTicketSection
+    );
+
+    hideElement(
+        trackTicketSection
+    );
+
+
+    showElement(
+        myTicketsSection
+    );
+
+
+    loadMyTickets();
+}
+
+
+function showTrackTicket() {
+
+    hideElement(
+        dashboardSection
+    );
+
+    hideElement(
+        submitTicketSection
+    );
+
+    hideElement(
+        myTicketsSection
+    );
+
+
+    showElement(
+        trackTicketSection
+    );
+
+
+    if (trackTicketMessage) {
+
+        trackTicketMessage.textContent =
+            '';
+    }
+
+
+    if (trackedTicketResult) {
+
+        hideElement(
+            trackedTicketResult
+        );
+    }
+}
+
+
+if (showSubmitTicketButton) {
+
+    showSubmitTicketButton.addEventListener(
+        'click',
+        showSubmitTicket
+    );
+}
+
+
+if (showMyTicketsButton) {
+
+    showMyTicketsButton.addEventListener(
+        'click',
+        showMyTickets
+    );
+}
+
+
+if (showTrackTicketButton) {
+
+    showTrackTicketButton.addEventListener(
+        'click',
+        showTrackTicket
+    );
+}
+
+
+if (backToEmployeeDashboardButton) {
+
+    backToEmployeeDashboardButton.addEventListener(
+        'click',
+        showEmployeeDashboard
+    );
+}
+
+
+if (backFromMyTicketsButton) {
+
+    backFromMyTicketsButton.addEventListener(
+        'click',
+        showEmployeeDashboard
+    );
+}
+
+
+if (backFromTrackTicketButton) {
+
+    backFromTrackTicketButton.addEventListener(
+        'click',
+        showEmployeeDashboard
+    );
+}
+
+
+/*
+    ============================================================
+    EMPLOYEE - MY TICKETS
+    ============================================================
+*/
+
+async function loadMyTickets() {
+
+    if (!getToken()) {
+        return;
+    }
 
 
     try {
 
+        const data =
+            await apiRequest(
+                '/tickets',
+                {
+                    method: 'GET'
+                }
+            );
+
+
+        const tickets =
+            data.tickets || [];
+
+
+        displayMyTickets(
+            tickets
+        );
+
+
+        updateEmployeeDashboard(
+            tickets
+        );
+
+    } catch (error) {
+
+        if (myTicketsTableBody) {
+
+            myTicketsTableBody.innerHTML = `
+                <tr>
+                    <td colspan="8">
+                        ${escapeHtml(
+                            error.message ||
+                            'Unable to load tickets.'
+                        )}
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+
+/*
+    ============================================================
+    EMPLOYEE - DISPLAY MY TICKETS
+    ============================================================
+*/
+
+function displayMyTickets(tickets) {
+
+    if (!myTicketsTableBody) {
+        return;
+    }
+
+
+    myTicketsTableBody.innerHTML = '';
+
+
+    if (
+        !tickets ||
+        tickets.length === 0
+    ) {
+
+        myTicketsTableBody.innerHTML = `
+            <tr>
+                <td colspan="8">
+                    No tickets found.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+
+    tickets.forEach(ticket => {
+
+        const row =
+            document.createElement('tr');
+
+
         /*
-            Send a GET request to the backend.
-
-            The Authorization header contains the JWT token.
-
-            The backend authentication middleware will use
-            this token to identify the logged-in employee.
+            ----------------------------------------------------
+            ASSIGNED TECHNICIAN
+            ----------------------------------------------------
         */
-        const response = await fetch(
-            `${API_BASE_URL}/tickets`,
-            {
-                method: 'GET',
 
-                headers: {
-                    'Authorization': `Bearer ${token}`
+        const assignedTechnician =
+            ticket.assigned_technician ||
+            ticket.technician_name ||
+            ticket.assignedTechnician ||
+            '';
+
+
+        /*
+            ----------------------------------------------------
+            TECHNICIAN COMMENT
+            ----------------------------------------------------
+        */
+
+        const technicianComment =
+            ticket.technician_comment ||
+            ticket.technicianComment ||
+            'No update yet.';
+
+
+        /*
+            ----------------------------------------------------
+            RESOLVED BY
+            ----------------------------------------------------
+        */
+
+        const resolvedBy =
+            ticket.resolved_by_name ||
+            ticket.resolved_by ||
+            ticket.resolvedBy ||
+            '';
+
+
+        /*
+            ----------------------------------------------------
+            RESOLVED DATE
+            ----------------------------------------------------
+        */
+
+        const resolvedDate =
+            ticket.resolved_at ||
+            ticket.resolved_date ||
+            ticket.resolvedAt ||
+            null;
+
+
+        /*
+            ----------------------------------------------------
+            CREATE TABLE ROW
+            ----------------------------------------------------
+        */
+
+        row.innerHTML = `
+
+            <td>
+                ${escapeHtml(
+                    ticket.id ?? ''
+                )}
+            </td>
+
+            <td>
+                ${escapeHtml(
+                    ticket.subject ??
+                    ticket.title ??
+                    ''
+                )}
+            </td>
+
+            <td>
+                ${escapeHtml(
+                    ticket.category ?? ''
+                )}
+            </td>
+
+            <td>
+                ${escapeHtml(
+                    ticket.status ?? ''
+                )}
+            </td>
+
+            <td>
+                ${escapeHtml(
+                    assignedTechnician ||
+                    'Unassigned'
+                )}
+            </td>
+
+            <td>
+                ${escapeHtml(
+                    technicianComment
+                )}
+            </td>
+
+            <td>
+                ${escapeHtml(
+                    resolvedBy ||
+                    'Not Resolved'
+                )}
+            </td>
+
+            <td>
+                ${
+                    resolvedDate
+                        ? escapeHtml(
+                            formatDate(
+                                resolvedDate
+                            )
+                        )
+                        : 'Not resolved'
+                }
+            </td>
+
+        `;
+
+
+        myTicketsTableBody.appendChild(
+            row
+        );
+
+    });
+}
+
+/*
+    ============================================================
+    EMPLOYEE DASHBOARD COUNTERS
+    ============================================================
+*/
+
+function updateEmployeeDashboard(tickets) {
+
+    const total =
+        tickets.length;
+
+
+    const open =
+        tickets.filter(
+            ticket =>
+                String(
+                    ticket.status
+                ).toLowerCase() ===
+                'open'
+        ).length;
+
+
+    const inProgress =
+        tickets.filter(
+            ticket =>
+                String(
+                    ticket.status
+                ).toLowerCase() ===
+                'in progress'
+        ).length;
+
+
+    const resolved =
+        tickets.filter(
+            ticket =>
+                String(
+                    ticket.status
+                ).toLowerCase() ===
+                'resolved'
+        ).length;
+
+
+    if (totalTicketsCount) {
+
+        totalTicketsCount.textContent =
+            total;
+    }
+
+
+    if (openTicketsCount) {
+
+        openTicketsCount.textContent =
+            open;
+    }
+
+
+    if (inProgressTicketsCount) {
+
+        inProgressTicketsCount.textContent =
+            inProgress;
+    }
+
+
+    if (resolvedTicketsCount) {
+
+        resolvedTicketsCount.textContent =
+            resolved;
+    }
+}
+
+
+/*
+    ============================================================
+    EMPLOYEE - SUBMIT TICKET
+    ============================================================
+*/
+
+if (ticketForm) {
+
+    ticketForm.addEventListener(
+        'submit',
+        async function (event) {
+
+            event.preventDefault();
+
+
+            if (!getToken()) {
+                return;
+            }
+
+
+            if (ticketMessage) {
+
+                ticketMessage.textContent =
+                    'Submitting ticket...';
+            }
+
+
+            try {
+
+                const data =
+                    await apiRequest(
+                        '/tickets',
+                        {
+                            method: 'POST',
+
+                            body:
+                                JSON.stringify({
+
+                                    subject:
+                                        ticketTitle.value.trim(),
+
+                                    description:
+                                        ticketDescription.value.trim(),
+
+                                    priority:
+                                        'Medium'
+                                })
+                        }
+                    );
+
+
+                const ticketId =
+                    data.ticketId ||
+                    data.id ||
+                    '';
+
+
+                let message =
+                    `Ticket submitted successfully. Ticket ID: ${ticketId}`;
+
+
+                if (
+                    data.assigned_technician
+                ) {
+
+                    message +=
+                        ` Assigned technician: ${
+                            data.assigned_technician.name ||
+                            data.assigned_technician.full_name ||
+                            'Assigned'
+                        }.`;
+                }
+
+
+                if (ticketMessage) {
+
+                    ticketMessage.textContent =
+                        message;
+                }
+
+
+                ticketForm.reset();
+
+
+                await loadMyTickets();
+
+            } catch (error) {
+
+                if (ticketMessage) {
+
+                    ticketMessage.textContent =
+                        error.message ||
+                        'Unable to submit ticket.';
+                }
+            }
+        }
+    );
+}
+
+
+/*
+    ============================================================
+    EMPLOYEE - TRACK TICKET
+    ============================================================
+*/
+
+if (trackTicketForm) {
+
+    trackTicketForm.addEventListener(
+        'submit',
+        async function (event) {
+
+            event.preventDefault();
+
+
+            if (!getToken()) {
+                return;
+            }
+
+
+            const requestedTicketId =
+                Number(
+                    trackTicketId.value
+                );
+
+
+            if (!requestedTicketId) {
+
+                if (trackTicketMessage) {
+
+                    trackTicketMessage.textContent =
+                        'Please enter a valid ticket ID.';
+                }
+
+                return;
+            }
+
+
+            if (trackTicketMessage) {
+
+                trackTicketMessage.textContent =
+                    'Loading ticket...';
+            }
+
+
+            hideElement(
+                trackedTicketResult
+            );
+
+
+            try {
+
+                /*
+                    The employee endpoint already
+                    returns only the employee's own tickets.
+                */
+
+                const data =
+                    await apiRequest(
+                        '/tickets',
+                        {
+                            method: 'GET'
+                        }
+                    );
+
+
+                const tickets =
+                    data.tickets || [];
+
+
+                const ticket =
+                    tickets.find(
+                        item =>
+                            Number(item.id) ===
+                            requestedTicketId
+                    );
+
+
+                if (!ticket) {
+
+                    if (trackTicketMessage) {
+
+                        trackTicketMessage.textContent =
+                            'Ticket not found or does not belong to your account.';
+                    }
+
+                    return;
+                }
+
+
+                const assignedTechnician =
+                    ticket.assigned_technician ||
+                    'Unassigned';
+
+
+                const technicianComment =
+                    ticket.technician_comment ||
+                    'No update yet.';
+
+
+                const resolvedBy =
+                    ticket.resolved_by_name ||
+                    ticket.resolved_by ||
+                    ticket.resolvedBy ||
+                    'Not resolved';
+
+
+                const resolvedDate =
+                    ticket.resolved_at ||
+                    '';
+
+
+                if (trackedTicketResult) {
+
+                    trackedTicketResult.innerHTML = `
+
+                        <h3>
+                            Ticket #${escapeHtml(
+                                ticket.id
+                            )}
+                        </h3>
+
+                        <p>
+                            <strong>Title:</strong>
+                            ${escapeHtml(
+                                ticket.subject
+                            )}
+                        </p>
+
+                        <p>
+                            <strong>Category:</strong>
+                            ${escapeHtml(
+                                ticket.category
+                            )}
+                        </p>
+
+                        <p>
+                            <strong>Description:</strong>
+                            ${escapeHtml(
+                                ticket.description
+                            )}
+                        </p>
+
+                        <p>
+                            <strong>Priority:</strong>
+                            ${escapeHtml(
+                                ticket.priority
+                            )}
+                        </p>
+
+                        <p>
+                            <strong>Status:</strong>
+                            ${escapeHtml(
+                                ticket.status ||
+                                ''
+                            )}
+                        </p>
+
+                        <p>
+                            <strong>Assigned Technician:</strong>
+                            ${escapeHtml(
+                                assignedTechnician
+                            )}
+                        </p>
+
+                        <p>
+                            <strong>Technician Update:</strong>
+                            ${escapeHtml(
+                                technicianComment
+                            )}
+                        </p>
+
+                        <p>
+                            <strong>Resolved By:</strong>
+                            ${escapeHtml(
+                                resolvedBy
+                            )}
+                        </p>
+
+                        <p>
+                            <strong>Resolved Date:</strong>
+                            ${
+                                resolvedDate
+                                    ? escapeHtml(
+                                        formatDate(
+                                            resolvedDate
+                                        )
+                                    )
+                                    : 'Not resolved'
+                            }
+                        </p>
+
+                        <p>
+                            <strong>Created Date:</strong>
+                            ${
+                                ticket.created_at
+                                    ? escapeHtml(
+                                        formatDate(
+                                            ticket.created_at
+                                        )
+                                    )
+                                    : 'Not available'
+                            }
+                        </p>
+                    `;
+
+
+                    showElement(
+                        trackedTicketResult
+                    );
+                }
+
+
+                if (trackTicketMessage) {
+
+                    trackTicketMessage.textContent =
+                        '';
+                }
+
+            } catch (error) {
+
+                if (trackTicketMessage) {
+
+                    trackTicketMessage.textContent =
+                        error.message ||
+                        'Unable to load ticket.';
+                }
+            }
+        }
+    );
+}
+
+
+/*
+    ============================================================
+    TECHNICIAN DASHBOARD
+    ============================================================
+*/
+
+function showTechnicianDashboard() {
+
+    hideElement(
+        technicianTicketDetailsSection
+    );
+
+
+    const technicianDashboard =
+        document.querySelector(
+            '.technician-dashboard'
+        );
+
+
+    showElement(
+        technicianDashboard
+    );
+
+
+    loadTechnicianDashboard();
+}
+
+
+async function loadTechnicianDashboard() {
+
+    if (!getToken()) {
+        return;
+    }
+
+
+    try {
+
+        const data =
+            await apiRequest(
+                '/technician/dashboard',
+                {
+                    method: 'GET'
+                }
+            );
+
+
+        const dashboard =
+            data.dashboard || {};
+
+
+        if (technicianAssignedCount) {
+
+            technicianAssignedCount.textContent =
+                dashboard.total_tickets || 0;
+        }
+
+
+        if (technicianOpenCount) {
+
+            technicianOpenCount.textContent =
+                dashboard.open_tickets || 0;
+        }
+
+
+        if (technicianInProgressCount) {
+
+            technicianInProgressCount.textContent =
+                dashboard.in_progress_tickets || 0;
+        }
+
+
+        if (technicianResolvedCount) {
+
+            technicianResolvedCount.textContent =
+                dashboard.resolved_tickets || 0;
+        }
+
+    } catch (error) {
+
+        /*
+            Ticket loading below will still run.
+        */
+    }
+
+
+    await loadTechnicianTickets();
+}
+
+
+/*
+    ============================================================
+    TECHNICIAN TICKETS
+    ============================================================
+*/
+
+async function loadTechnicianTickets() {
+
+    if (!getToken()) {
+        return;
+    }
+
+
+    try {
+
+        const data =
+            await apiRequest(
+                '/technician/tickets',
+                {
+                    method: 'GET'
+                }
+            );
+
+
+        const tickets =
+            data.tickets || [];
+
+
+        displayTechnicianTickets(
+            tickets
+        );
+
+
+        updateTechnicianCounts(
+            tickets
+        );
+
+
+        if (technicianTicketMessage) {
+
+            technicianTicketMessage.textContent =
+                '';
+        }
+
+    } catch (error) {
+
+        if (technicianTicketMessage) {
+
+            technicianTicketMessage.textContent =
+                error.message ||
+                'Unable to load assigned tickets.';
+        }
+    }
+}
+
+
+function updateTechnicianCounts(tickets) {
+
+    if (technicianAssignedCount) {
+
+        technicianAssignedCount.textContent =
+            tickets.length;
+    }
+
+
+    if (technicianOpenCount) {
+
+        technicianOpenCount.textContent =
+            tickets.filter(
+                ticket =>
+                    String(
+                        ticket.status
+                    ).toLowerCase() ===
+                    'open'
+            ).length;
+    }
+
+
+    if (technicianInProgressCount) {
+
+        technicianInProgressCount.textContent =
+            tickets.filter(
+                ticket =>
+                    String(
+                        ticket.status
+                    ).toLowerCase() ===
+                    'in progress'
+            ).length;
+    }
+
+
+    if (technicianResolvedCount) {
+
+        technicianResolvedCount.textContent =
+            tickets.filter(
+                ticket =>
+                    String(
+                        ticket.status
+                    ).toLowerCase() ===
+                    'resolved'
+            ).length;
+    }
+}
+
+
+function displayTechnicianTickets(tickets) {
+
+    if (!technicianTicketsTableBody) {
+        return;
+    }
+
+
+    technicianTicketsTableBody.innerHTML = '';
+
+
+    if (
+        !tickets ||
+        tickets.length === 0
+    ) {
+
+        technicianTicketsTableBody.innerHTML = `
+            <tr>
+                <td colspan="8">
+                    No tickets assigned to you.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+
+    tickets.forEach(
+        ticket => {
+    
+            const row =
+                document.createElement('tr');
+    
+    
+            // Get the assigned technician name.
+            const assignedTechnician =
+                ticket.assigned_technician ||
+                ticket.technician_name ||
+                ticket.assignedTechnician ||
+                'Unassigned';
+    
+    
+            // Get the technician who resolved the ticket.
+            const resolvedBy =
+                ticket.resolved_by_name ||
+                ticket.resolvedBy ||
+                ticket.resolved_by ||
+                'Not Resolved';
+    
+    
+            // Get the resolved date.
+            const resolvedDate =
+                ticket.resolved_at ||
+                ticket.resolved_date ||
+                ticket.resolvedAt ||
+                '';
+    
+    
+            row.innerHTML = `
+    
+                <!-- ID -->
+                <td>
+                    ${escapeHtml(
+                        String(ticket.id ?? '')
+                    )}
+                </td>
+    
+    
+                <!-- Title -->
+                <td>
+                    ${escapeHtml(
+                        ticket.subject ??
+                        ticket.title ??
+                        ''
+                    )}
+                </td>
+    
+    
+                <!-- Category -->
+                <td>
+                    ${escapeHtml(
+                        ticket.category ?? ''
+                    )}
+                </td>
+    
+    
+                <!-- Status -->
+                <td>
+                    ${escapeHtml(
+                        ticket.status ?? ''
+                    )}
+                </td>
+    
+    
+                <!-- Assigned Technician -->
+                <td>
+                    ${escapeHtml(
+                        assignedTechnician
+                    )}
+                </td>
+    
+    
+                <!-- Technician Update -->
+                <td>
+                    ${escapeHtml(
+                        ticket.technician_comment ||
+                        'No update yet.'
+                    )}
+                </td>
+    
+    
+                <!-- Resolved By -->
+                <td>
+                    ${escapeHtml(
+                        resolvedBy
+                    )}
+                </td>
+    
+    
+                <!-- Resolved Date -->
+                <td>
+                    ${
+                        resolvedDate
+                            ? escapeHtml(
+                                formatDate(
+                                    resolvedDate
+                                )
+                            )
+                            : 'Not resolved'
+                    }
+                </td>
+    
+    
+                <!-- View -->
+                <td>
+                    <button
+                        type="button"
+                        class="secondary-button"
+                        onclick="viewTechnicianTicket(${Number(
+                            ticket.id
+                        )})"
+                    >
+                        View
+                    </button>
+                </td>
+    
+            `;
+    
+    
+            technicianTicketsTableBody.appendChild(
+                row
+            );
+        }
+    );
+   
+}
+
+
+/*
+    ============================================================
+    VIEW TECHNICIAN TICKET
+    ============================================================
+*/
+
+async function viewTechnicianTicket(ticketId) {
+
+    if (!getToken()) {
+        return;
+    }
+
+
+    try {
+
+        const data =
+            await apiRequest(
+                `/technician/tickets/${ticketId}`,
+                {
+                    method: 'GET'
+                }
+            );
+
+
+        const ticket =
+            data.ticket;
+
+
+        if (!ticket) {
+
+            throw new Error(
+                'Ticket information was not returned.'
+            );
+        }
+
+
+        if (technicianTicketDetails) {
+
+            technicianTicketDetails.innerHTML = `
+
+                <h3>
+                    Ticket #${escapeHtml(
+                        ticket.id
+                    )}
+                </h3>
+
+                <p>
+                    <strong>Employee:</strong>
+                    ${escapeHtml(
+                        ticket.employee_name
+                    )}
+                </p>
+
+                <p>
+                    <strong>Email:</strong>
+                    ${escapeHtml(
+                        ticket.employee_email
+                    )}
+                </p>
+
+                <p>
+                    <strong>Title:</strong>
+                    ${escapeHtml(
+                        ticket.subject
+                    )}
+                </p>
+
+                <p>
+                    <strong>Category:</strong>
+                    ${escapeHtml(
+                        ticket.category
+                    )}
+                </p>
+
+                <p>
+                    <strong>Priority:</strong>
+                    ${escapeHtml(
+                        ticket.priority
+                    )}
+                </p>
+
+                <p>
+                    <strong>Description:</strong>
+                    ${escapeHtml(
+                        ticket.description
+                    )}
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    ${escapeHtml(
+                        ticket.status
+                    )}
+                </p>
+
+                <p>
+                    <strong>Technician Update:</strong>
+                    ${escapeHtml(
+                        ticket.technician_comment || 
+                        'No update yet.'
+                    )}
+                </p>
+
+                <p>
+                    <strong>Assigned Date:</strong>
+                    ${
+                        ticket.assigned_at
+                            ? escapeHtml(
+                                formatDate(
+                                    ticket.assigned_at
+                                )
+                            )
+                            : 'Not available'
+                    }
+                </p>
+
+                <p>
+                    <strong>Resolved By:</strong>
+                    ${escapeHtml(
+                        ticket.resolved_by ||
+                        ticket.resolved_by_name ||
+                        'Not resolved'
+                    )}
+                </p>
+
+                <p>
+                    <strong>Resolved Date:</strong>
+                    ${
+                        ticket.resolved_at
+                            ? escapeHtml(
+                                formatDate(
+                                    ticket.resolved_at
+                                )
+                            )
+                            : 'Not resolved'
+                    }
+                </p>
+            `;
+        }
+
+
+        if (technicianTicketStatus) {
+
+            technicianTicketStatus.value =
+                ticket.status ||
+                'Open';
+        }
+
+
+        if (technicianTicketComment) {
+
+            technicianTicketComment.value =
+                ticket.technician_comment ||
+                '';
+        }
+
+
+        if (technicianUpdateTicketForm) {
+
+            technicianUpdateTicketForm.dataset.ticketId =
+                ticket.id;
+        }
+
+
+        hideElement(
+            document.querySelector(
+                '.technician-dashboard'
+            )
+        );
+
+
+        showElement(
+            technicianTicketDetailsSection
+        );
+
+
+        if (technicianUpdateMessage) {
+
+            technicianUpdateMessage.textContent =
+                '';
+        }
+
+    } catch (error) {
+
+        if (technicianTicketMessage) {
+
+            technicianTicketMessage.textContent =
+                error.message ||
+                'Unable to load ticket.';
+        }
+    }
+}
+
+
+/*
+    ============================================================
+    TECHNICIAN UPDATE
+    ============================================================
+*/
+
+if (technicianUpdateTicketForm) {
+
+    technicianUpdateTicketForm.addEventListener(
+        'submit',
+        async function (event) {
+
+            event.preventDefault();
+
+
+            const ticketId =
+                technicianUpdateTicketForm.dataset.ticketId;
+
+
+            if (
+                !getToken() ||
+                !ticketId
+            ) {
+
+                return;
+            }
+
+
+            if (technicianUpdateMessage) {
+
+                technicianUpdateMessage.textContent =
+                    'Updating ticket...';
+            }
+
+
+            try {
+
+                await apiRequest(
+                    `/technician/tickets/${ticketId}/status`,
+                    {
+                        method: 'PUT',
+
+                        body:
+                            JSON.stringify({
+
+                                status:
+                                    technicianTicketStatus.value,
+
+                                technician_comment:
+                                    technicianTicketComment
+                                        ? technicianTicketComment.value.trim()
+                                        : ''
+                            })
+                    }
+                );
+
+
+                if (technicianUpdateMessage) {
+
+                    technicianUpdateMessage.textContent =
+                        'Ticket updated successfully.';
+                }
+
+
+                /*
+                    Reload technician ticket list.
+                */
+
+                await loadTechnicianTickets();
+
+
+                /*
+                    Reload the current ticket.
+
+                    This also means the saved technician
+                    comment will immediately appear.
+                */
+
+                await viewTechnicianTicket(
+                    ticketId
+                );
+
+            } catch (error) {
+
+                if (technicianUpdateMessage) {
+
+                    technicianUpdateMessage.textContent =
+                        error.message ||
+                        'Unable to update ticket.';
+                }
+            }
+        }
+    );
+}
+
+
+/*
+    ============================================================
+    TECHNICIAN NAVIGATION
+    ============================================================
+*/
+
+if (refreshTechnicianTicketsButton) {
+
+    refreshTechnicianTicketsButton.addEventListener(
+        'click',
+        loadTechnicianTickets
+    );
+}
+
+
+if (backToTechnicianDashboardButton) {
+
+    backToTechnicianDashboardButton.addEventListener(
+        'click',
+        showTechnicianDashboard
+    );
+}
+
+
+/*
+    ============================================================
+    ADMIN DASHBOARD
+    ============================================================
+*/
+
+function showAdminDashboard() {
+
+    showAdminModule(
+        'dashboard'
+    );
+}
+
+
+async function loadAdminDashboard() {
+
+    if (!getToken()) {
+        return;
+    }
+
+
+    await loadAdminUsers();
+
+    await loadAdminTechnicians();
+
+    await loadAdminTickets();
+}
+
+
+/*
+    ============================================================
+    ADMIN - USERS
+    ============================================================
+*/
+
+async function loadAdminUsers() {
+
+    if (!getToken()) {
+        return;
+    }
+
+
+    try {
+
+        const data =
+            await apiRequest(
+                '/admin/users',
+                {
+                    method: 'GET'
+                }
+            );
+
+
+        const users =
+            data.users || [];
+
+
+        updateAdminUserCounts(
+            users
+        );
+
+
+        displayAdminUsers(
+            users
+        );
+
+    } catch (error) {
+
+        if (adminUsersContainer) {
+
+            adminUsersContainer.innerHTML = `
+                <p class="error-message">
+                    ${escapeHtml(
+                        error.message ||
+                        'Unable to load users.'
+                    )}
+                </p>
+            `;
+        }
+    }
+}
+
+
+function updateAdminUserCounts(users) {
+
+    if (adminTotalUsersCount) {
+
+        adminTotalUsersCount.textContent =
+            users.length;
+    }
+
+
+    const employees =
+        users.filter(
+            user =>
+                user.role ===
+                'employee'
+        ).length;
+
+
+    const technicians =
+        users.filter(
+            user =>
+                user.role ===
+                'ict_technician'
+        ).length;
+
+
+    if (adminEmployeeCount) {
+
+        adminEmployeeCount.textContent =
+            employees;
+    }
+
+
+    if (adminTechnicianCount) {
+
+        adminTechnicianCount.textContent =
+            technicians;
+    }
+}
+
+
+/*
+    ============================================================
+    ADMIN USERS TABLE
+    ============================================================
+*/
+
+function displayAdminUsers(users) {
+
+    if (!adminUsersContainer) {
+        return;
+    }
+
+
+    if (
+        !users ||
+        users.length === 0
+    ) {
+
+        adminUsersContainer.innerHTML = `
+            <div class="admin-empty-state">
+                <p>No users found.</p>
+            </div>
+        `;
+
+        return;
+    }
+
+
+    let html = `
+
+        <div class="admin-table-wrapper">
+
+            <table class="tickets-table admin-users-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>ID</th>
+
+                        <th>Name</th>
+
+                        <th>Email</th>
+
+                        <th>Role</th>
+
+                        <th>Action</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+    `;
+
+
+    users.forEach(
+        user => {
+
+            html += `
+
+                <tr>
+
+                    <td>
+                        ${escapeHtml(
+                            user.id
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            user.full_name
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            user.email
+                        )}
+                    </td>
+
+                    <td>
+
+                        <select
+                            id="role-${Number(
+                                user.id
+                            )}"
+                            class="admin-role-select"
+                        >
+
+                            <option
+                                value="employee"
+                                ${
+                                    user.role ===
+                                    'employee'
+                                        ? 'selected'
+                                        : ''
+                                }
+                            >
+                                Employee
+                            </option>
+
+                            <option
+                                value="ict_technician"
+                                ${
+                                    user.role ===
+                                    'ict_technician'
+                                        ? 'selected'
+                                        : ''
+                                }
+                            >
+                                ICT Technician
+                            </option>
+
+                            <option
+                                value="administrator"
+                                ${
+                                    user.role ===
+                                    'administrator'
+                                        ? 'selected'
+                                        : ''
+                                }
+                            >
+                                Administrator
+                            </option>
+
+                        </select>
+
+                    </td>
+
+                    <td>
+
+                        <button
+                            type="button"
+                            class="primary-button admin-role-button"
+                            onclick="updateUserRole(${Number(
+                                user.id
+                            )})"
+                        >
+                            Update Role
+                        </button>
+
+                    </td>
+
+                </tr>
+            `;
+        }
+    );
+
+
+    html += `
+
+                </tbody>
+
+            </table>
+
+        </div>
+    `;
+
+
+    adminUsersContainer.innerHTML =
+        html;
+}
+
+
+/*
+    ============================================================
+    ADMIN - UPDATE USER ROLE
+    ============================================================
+*/
+
+async function updateUserRole(userId) {
+
+    if (!getToken()) {
+        return;
+    }
+
+
+    const roleSelect =
+        document.getElementById(
+            `role-${userId}`
+        );
+
+
+    if (!roleSelect) {
+        return;
+    }
+
+
+    try {
+
+        await apiRequest(
+            `/admin/users/${userId}/role`,
+            {
+                method: 'PUT',
+
+                body:
+                    JSON.stringify({
+                        role:
+                            roleSelect.value
+                    })
+            }
+        );
+
+
+        if (
+            getUser() &&
+            Number(getUser().id) ===
+            Number(userId)
+        ) {
+
+            const currentUser =
+                getUser();
+
+            currentUser.role =
+                roleSelect.value;
+
+            saveSession(
+                getToken(),
+                currentUser
+            );
+        }
+
+
+        await loadAdminUsers();
+
+        await loadAdminTechnicians();
+
+        await loadAdminTickets();
+
+        alert(
+            'User role updated successfully.'
+        );
+
+    } catch (error) {
+
+        alert(
+            error.message ||
+            'Unable to update user role.'
+        );
+    }
+}
+
+
+/*
+    ============================================================
+    ADMIN - TECHNICIANS
+    ============================================================
+*/
+
+async function loadAdminTechnicians() {
+
+    if (!getToken()) {
+        return;
+    }
+
+
+    try {
+
+        const data =
+            await apiRequest(
+                '/admin/technicians',
+                {
+                    method: 'GET'
+                }
+            );
+
+
+        const technicianRows =
+            data.technicians || [];
+
+
+        const technicianMap =
+            new Map();
+
+
+        technicianRows.forEach(
+            row => {
+
+                if (
+                    !technicianMap.has(
+                        row.id
+                    )
+                ) {
+
+                    technicianMap.set(
+                        row.id,
+                        {
+                            id:
+                                row.id,
+
+                            full_name:
+                                row.full_name,
+
+                            email:
+                                row.email,
+
+                            role:
+                                row.role,
+
+                            skills:
+                                []
+                        }
+                    );
+                }
+
+
+                const technician =
+                    technicianMap.get(
+                        row.id
+                    );
+
+
+                if (
+                    row.skill_id &&
+                    row.category
+                ) {
+
+                    technician.skills.push({
+                        id:
+                            row.skill_id,
+
+                        category:
+                            row.category
+                    });
                 }
             }
         );
 
 
-        /*
-            Convert the response into a JavaScript object.
-        */
-        const data = await response.json();
+        const technicians =
+            Array.from(
+                technicianMap.values()
+            );
 
 
-        /*
-            If the backend rejects the request, display
-            the returned error message.
-        */
-        if (!response.ok) {
-
-            ticketsMessage.textContent =
-                data.message || 'Unable to retrieve tickets.';
-
-            return;
-        }
-
-
-        /*
-            Display the tickets returned by the backend.
-        */
-        displayTickets(data.tickets);
+        displayAdminTechnicians(
+            technicians
+        );
 
     } catch (error) {
 
-        /*
-            Handle connection errors.
-        */
-        console.error('Load tickets error:', error);
+        if (
+            adminTechniciansContainer
+        ) {
 
-        ticketsMessage.textContent =
-            'Unable to connect to the backend server.';
+            adminTechniciansContainer.innerHTML = `
+                <p class="error-message">
+                    ${escapeHtml(
+                        error.message ||
+                        'Unable to load technicians.'
+                    )}
+                </p>
+            `;
+        }
     }
 }
 
 
-/* ============================================================
-   5. DISPLAY TICKETS
-   ============================================================ */
-
 /*
-    Display the tickets inside the ticketsContainer element.
-
-    The backend returns an array of ticket objects.
-
-    Example:
-
-    [
-        {
-            id: 1,
-            subject: "Cannot connect to WiFi",
-            description: "...",
-            category: "Network",
-            priority: "High",
-            status: "Open"
-        }
-    ]
+    ============================================================
+    ADMIN TECHNICIAN CARDS
+    ============================================================
 */
-function displayTickets(tickets) {
 
-    /*
-        Remove any previous ticket content.
-    */
-    ticketsContainer.innerHTML = '';
+function displayAdminTechnicians(
+    technicians
+) {
+
+    if (!adminTechniciansContainer) {
+        return;
+    }
 
 
-    /*
-        Check whether the employee has submitted any tickets.
-    */
-    if (!tickets || tickets.length === 0) {
+    if (
+        !technicians ||
+        technicians.length === 0
+    ) {
 
-        ticketsMessage.textContent =
-            'You have not submitted any tickets yet.';
+        adminTechniciansContainer.innerHTML = `
+            <div class="admin-empty-state">
+                <p>No technicians found.</p>
+            </div>
+        `;
 
         return;
     }
 
 
-    /*
-        Clear the loading message because tickets were found.
-    */
-    ticketsMessage.textContent =
-        `${tickets.length} ticket(s) found.`;
+    let html = '';
 
 
-    /*
-        Loop through every ticket returned by the backend.
-    */
-    tickets.forEach(function (ticket) {
+    technicians.forEach(
+        technician => {
 
-        /*
-            Create a new article element for the ticket.
-        */
-        const ticketElement = document.createElement('article');
+            const skills =
+                technician.skills || [];
 
 
-        /*
-            Add a CSS class so we can style ticket cards later.
-        */
-        ticketElement.className = 'ticket-card';
+            const technicianName =
+                technician.full_name ||
+                'Unnamed Technician';
 
 
-        /*
-            Add the ticket information to the page.
-
-            textContent is used for user-provided values
-            rather than inserting raw HTML.
-        */
-        const ticketTitle = document.createElement('h3');
-        ticketTitle.textContent = ticket.subject;
+            const technicianEmail =
+                technician.email ||
+                'No email available';
 
 
-        const ticketDescription = document.createElement('p');
-        ticketDescription.textContent = ticket.description;
+            const technicianRole =
+                technician.role ||
+                'ICT Technician';
 
 
-        const ticketCategory = document.createElement('p');
-        ticketCategory.textContent =
-            `Category: ${ticket.category}`;
+            html += `
+
+                <article class="technician-card">
+
+                    <div class="technician-card-header">
+
+                        <div class="technician-info">
+
+                            <h3 class="technician-name">
+                                ${escapeHtml(
+                                    technicianName
+                                )}
+                            </h3>
+
+                            <p class="technician-email">
+                                ${escapeHtml(
+                                    technicianEmail
+                                )}
+                            </p>
+
+                        </div>
+
+                        <span class="technician-role">
+                            ${escapeHtml(
+                                technicianRole
+                            )}
+                        </span>
+
+                    </div>
 
 
-        const ticketPriority = document.createElement('p');
-        ticketPriority.textContent =
-            `Priority: ${ticket.priority}`;
+                    <div class="technician-skills-section">
+
+                        <h4>
+                            Current Skills
+                        </h4>
+
+                        <div class="technician-skills-list">
+            `;
 
 
-        const ticketStatus = document.createElement('p');
-        ticketStatus.textContent =
-            `Status: ${ticket.status}`;
+            if (
+                skills.length ===
+                0
+            ) {
+
+                html += `
+
+                    <p class="no-skills-message">
+                        No skills assigned yet.
+                    </p>
+
+                `;
+
+            } else {
+
+                skills.forEach(
+                    skill => {
+
+                        const skillId =
+                            skill.id ??
+                            skill.skill_id;
 
 
-        const ticketDate = document.createElement('p');
-        ticketDate.textContent =
-            `Submitted: ${ticket.created_at}`;
+                        const skillName =
+                            skill.category ||
+                            skill.name ||
+                            'Skill';
 
 
-        /*
-            Add all ticket information to the ticket article.
-        */
-        ticketElement.appendChild(ticketTitle);
+                        html += `
 
-        ticketElement.appendChild(ticketDescription);
+                            <div class="technician-skill-item">
 
-        ticketElement.appendChild(ticketCategory);
+                                <span class="skill-tag">
+                                    ${escapeHtml(
+                                        skillName
+                                    )}
+                                </span>
 
-        ticketElement.appendChild(ticketPriority);
+                                <button
+                                    type="button"
+                                    class="admin-remove-skill-button"
+                                    onclick="removeTechnicianSkill(
+                                        ${Number(
+                                            technician.id
+                                        )},
+                                        ${Number(
+                                            skillId
+                                        )}
+                                    )"
+                                >
+                                    Remove
+                                </button>
 
-        ticketElement.appendChild(ticketStatus);
+                            </div>
 
-        ticketElement.appendChild(ticketDate);
+                        `;
+                    }
+                );
+            }
 
 
-        /*
-            Add the completed ticket card to the page.
-        */
-        ticketsContainer.appendChild(ticketElement);
-    });
+            html += `
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="add-skill-section">
+
+                        <h4>
+                            Add Technician Skill
+                        </h4>
+
+                        <div class="add-skill-controls">
+
+                            <select
+                                id="skill-${Number(
+                                    technician.id
+                                )}"
+                                class="admin-skill-input"
+                                aria-label="New skill for ${escapeHtml(
+                                    technicianName
+                                )}"
+                            >
+
+                                <option value="">
+                                    Select a skill
+                                </option>
+
+                                <option value="Network">
+                                    Network
+                                </option>
+
+                                <option value="Hardware">
+                                    Hardware
+                                </option>
+
+                                <option value="Software">
+                                    Software
+                                </option>
+
+                                <option value="Account">
+                                    Account
+                                </option>
+
+                            </select>
+
+
+                            <button
+                                type="button"
+                                class="primary-button admin-add-skill-button"
+                                onclick="addTechnicianSkill(
+                                    ${Number(
+                                        technician.id
+                                    )}
+                                )"
+                            >
+                                Add Skill
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </article>
+            `;
+        }
+    );
+
+
+    adminTechniciansContainer.innerHTML =
+        html;
 }
 
 
-/* ============================================================
-   6. LOGOUT
-   ============================================================ */
-
 /*
-    Listen for the employee clicking the Logout button.
+    ============================================================
+    ADMIN - ADD TECHNICIAN SKILL
+    ============================================================
 */
-logoutButton.addEventListener('click', function () {
 
-    /*
-        Remove the JWT token from the browser.
-    */
-    localStorage.removeItem('authToken');
+async function addTechnicianSkill(
+    technicianId
+) {
 
-
-    /*
-        Hide the My Tickets section.
-    */
-    ticketsSection.hidden = true;
+    if (!getToken()) {
+        return;
+    }
 
 
-    /*
-        Show the login section again.
-    */
-    loginSection.hidden = false;
+    const input =
+        document.getElementById(
+            `skill-${technicianId}`
+        );
 
 
-    /*
-        Clear the login form fields.
-    */
-    loginForm.reset();
+    if (!input) {
+        return;
+    }
 
 
-    /*
-        Clear previous ticket information.
-    */
-    ticketsContainer.innerHTML = '';
+    const category =
+        input.value;
 
 
-    /*
-        Clear the ticket status message.
-    */
-    ticketsMessage.textContent = '';
+    if (!category) {
+
+        alert(
+            'Please select a skill.'
+        );
+
+        return;
+    }
 
 
-    /*
-        Display a logout confirmation.
-    */
-    loginMessage.textContent = 'You have been logged out.';
-});
+    try {
+
+        await apiRequest(
+            `/admin/technicians/${technicianId}/skills`,
+            {
+                method: 'POST',
+
+                body:
+                    JSON.stringify({
+                        category:
+                            category
+                    })
+            }
+        );
 
 
-/* ============================================================
-   7. CHECK EXISTING LOGIN
-   ============================================================ */
-
-/*
-    When the page loads, check whether a JWT token already
-    exists in localStorage.
-
-    If one exists, we attempt to load the employee's tickets.
-*/
-const existingToken = localStorage.getItem('authToken');
+        input.value =
+            '';
 
 
-if (existingToken) {
+        await loadAdminTechnicians();
 
-    /*
-        Hide the login section because a token already exists.
-    */
-    loginSection.hidden = true;
+    } catch (error) {
 
-
-    /*
-        Show the My Tickets section.
-    */
-    ticketsSection.hidden = false;
-
-
-    /*
-        Request the employee's tickets.
-    */
-    loadMyTickets();
+        alert(
+            error.message ||
+            'Unable to add technician skill.'
+        );
+    }
 }
+
+
+/*
+    ============================================================
+    ADMIN - REMOVE TECHNICIAN SKILL
+    ============================================================
+*/
+
+async function removeTechnicianSkill(
+    technicianId,
+    skillId
+) {
+
+    if (!getToken()) {
+        return;
+    }
+
+
+    try {
+
+        await apiRequest(
+            `/admin/technicians/${technicianId}/skills/${skillId}`,
+            {
+                method: 'DELETE'
+            }
+        );
+
+
+        await loadAdminTechnicians();
+
+    } catch (error) {
+
+        alert(
+            error.message ||
+            'Unable to remove technician skill.'
+        );
+    }
+}
+
+
+/*
+    ============================================================
+    ADMIN - ACTIVE TICKETS
+    ============================================================
+*/
+
+async function loadAdminTickets() {
+
+    if (!getToken()) {
+        return;
+    }
+
+
+    if (adminTicketsContainer) {
+
+        adminTicketsContainer.innerHTML = `
+            <p>
+                Loading active tickets...
+            </p>
+        `;
+    }
+
+
+    try {
+
+        const data =
+            await apiRequest(
+                '/admin/tickets/active',
+                {
+                    method: 'GET'
+                }
+            );
+
+
+        const tickets =
+            data.tickets || [];
+
+
+        if (adminTicketCount) {
+
+            adminTicketCount.textContent =
+                tickets.length;
+        }
+
+
+        displayAdminTickets(
+            tickets
+        );
+
+    } catch (error) {
+
+        if (adminTicketCount) {
+
+            adminTicketCount.textContent =
+                '—';
+        }
+
+
+        if (adminTicketsContainer) {
+
+            adminTicketsContainer.innerHTML = `
+                <p class="error-message">
+                    ${escapeHtml(
+                        error.message ||
+                        'Unable to load active tickets.'
+                    )}
+                </p>
+            `;
+        }
+    }
+}
+
+
+/*
+    ============================================================
+    ADMIN ACTIVE TICKETS TABLE
+    ============================================================
+*/
+
+function displayAdminTickets(
+    tickets
+) {
+
+    if (!adminTicketsContainer) {
+        return;
+    }
+
+
+    if (
+        !tickets ||
+        tickets.length === 0
+    ) {
+
+        adminTicketsContainer.innerHTML = `
+            <div class="admin-empty-state">
+                <p>
+                    No active tickets found.
+                </p>
+            </div>
+        `;
+
+        return;
+    }
+
+
+    let html = `
+
+        <div class="admin-table-wrapper">
+
+            <table class="tickets-table admin-tickets-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>ID</th>
+
+                        <th>Subject</th>
+
+                        <th>Requester</th>
+
+                        <th>Category</th>
+
+                        <th>Priority</th>
+
+                        <th>Status</th>
+
+                        <th>Assigned Technician</th>
+
+                        <th>Created</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+    `;
+
+
+    tickets.forEach(
+        ticket => {
+
+            const technicianName =
+                ticket.technician_name ||
+                'Unassigned';
+
+
+            html += `
+
+                <tr>
+
+                    <td>
+                        ${escapeHtml(
+                            ticket.id
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            ticket.subject
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            ticket.requester_name ||
+                            'Unknown'
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            ticket.category
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            ticket.priority
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            ticket.status
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            technicianName
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            formatDate(
+                                ticket.created_at
+                            )
+                        )}
+                    </td>
+
+                </tr>
+            `;
+        }
+    );
+
+
+    html += `
+
+                </tbody>
+
+            </table>
+
+        </div>
+    `;
+
+
+    adminTicketsContainer.innerHTML =
+        html;
+}
+
+
+/*
+    ============================================================
+    ADMIN NAVIGATION
+    ============================================================
+*/
+
+function showAdminModule(
+    moduleName
+) {
+
+    const dashboard =
+        document.getElementById(
+            'adminDashboardSection'
+        );
+
+    const users =
+        document.getElementById(
+            'adminUsersSection'
+        );
+
+    const technicians =
+        document.getElementById(
+            'adminTechniciansSection'
+        );
+
+    const tickets =
+        document.getElementById(
+            'adminTicketsSection'
+        );
+
+
+    hideElement(
+        dashboard
+    );
+
+    hideElement(
+        users
+    );
+
+    hideElement(
+        technicians
+    );
+
+    hideElement(
+        tickets
+    );
+
+
+    if (
+        moduleName ===
+        'dashboard'
+    ) {
+
+        showElement(
+            dashboard
+        );
+
+        loadAdminDashboard();
+
+        return;
+    }
+
+
+    if (
+        moduleName ===
+        'users'
+    ) {
+
+        showElement(
+            users
+        );
+
+        loadAdminUsers();
+
+        return;
+    }
+
+
+    if (
+        moduleName ===
+        'technicians'
+    ) {
+
+        showElement(
+            technicians
+        );
+
+        loadAdminTechnicians();
+
+        return;
+    }
+
+
+    if (
+        moduleName ===
+        'tickets'
+    ) {
+
+        showElement(
+            tickets
+        );
+
+        loadAdminTickets();
+
+        return;
+    }
+}
+
+
+/*
+    ============================================================
+    LOGOUT
+    ============================================================
+*/
+
+function logout() {
+
+    clearSession();
+
+    hideAllSections();
+
+    showLogin();
+
+
+    if (loginForm) {
+
+        loginForm.reset();
+    }
+
+
+    if (loginMessage) {
+
+        loginMessage.textContent =
+            '';
+    }
+}
+
+
+if (logoutButton) {
+
+    logoutButton.addEventListener(
+        'click',
+        logout
+    );
+}
+
+
+if (technicianLogoutButton) {
+
+    technicianLogoutButton.addEventListener(
+        'click',
+        logout
+    );
+}
+
+
+if (adminLogoutButton) {
+
+    adminLogoutButton.addEventListener(
+        'click',
+        logout
+    );
+}
+
+
+/*
+    ============================================================
+    ACCESSIBILITY
+    ============================================================
+*/
+
+let textSize = 100;
+
+
+if (accessibilityButton) {
+
+    accessibilityButton.addEventListener(
+        'click',
+        function () {
+
+            if (
+                accessibilityPanel.style.display ===
+                    'none' ||
+                accessibilityPanel.style.display ===
+                    ''
+            ) {
+
+                accessibilityPanel.style.display =
+                    'block';
+
+            } else {
+
+                accessibilityPanel.style.display =
+                    'none';
+            }
+        }
+    );
+}
+
+
+function applyTextSize() {
+
+    document.documentElement.style.fontSize =
+        `${textSize}%`;
+}
+
+
+if (increaseTextButton) {
+
+    increaseTextButton.addEventListener(
+        'click',
+        function () {
+
+            if (
+                textSize <
+                130
+            ) {
+
+                textSize +=
+                    10;
+            }
+
+
+            applyTextSize();
+        }
+    );
+}
+
+
+if (decreaseTextButton) {
+
+    decreaseTextButton.addEventListener(
+        'click',
+        function () {
+
+            if (
+                textSize >
+                80
+            ) {
+
+                textSize -=
+                    10;
+            }
+
+
+            applyTextSize();
+        }
+    );
+}
+
+
+if (resetTextButton) {
+
+    resetTextButton.addEventListener(
+        'click',
+        function () {
+
+            textSize =
+                100;
+
+            applyTextSize();
+        }
+    );
+}
+
+
+if (contrastButton) {
+
+    contrastButton.addEventListener(
+        'click',
+        function () {
+
+            document.body.classList.toggle(
+                'high-contrast'
+            );
+        }
+    );
+}
+
+
+if (resetAccessibilityButton) {
+
+    resetAccessibilityButton.addEventListener(
+        'click',
+        function () {
+
+            textSize =
+                100;
+
+            applyTextSize();
+
+
+            document.body.classList.remove(
+                'high-contrast'
+            );
+        }
+    );
+}
+
+
+/*
+    ============================================================
+    DATE FORMAT
+    ============================================================
+*/
+
+function formatDate(value) {
+
+    if (!value) {
+        return '';
+    }
+
+
+    const date =
+        new Date(value);
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+
+        return value;
+    }
+
+
+    return date.toLocaleString(
+        'en-AU',
+        {
+            dateStyle:
+                'medium',
+
+            timeStyle:
+                'short'
+        }
+    );
+}
+
+
+/*
+    ============================================================
+    RESTORE SESSION
+    ============================================================
+*/
+
+function restoreSession() {
+
+    const token =
+        getToken();
+
+    const user =
+        getUser();
+
+
+    if (
+        !token ||
+        !user
+    ) {
+
+        clearSession();
+
+        showLogin();
+
+        return;
+    }
+
+
+    handleLoginByRole(
+        user
+    );
+}
+
+
+/*
+    ============================================================
+    START APPLICATION
+    ============================================================
+*/
+
+restoreSession();

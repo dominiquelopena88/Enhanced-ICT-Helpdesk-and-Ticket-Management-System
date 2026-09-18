@@ -23,17 +23,18 @@ const getAllUsers = async (req, res) => {
     }
 };
 
+
 // Update user role
 const updateUserRole = async (req, res) => {
     try {
         const userId = req.params.id;
         const { role } = req.body;
 
-        const allowedRoles = ['employee', 'admin'];
+        const allowedRoles = ['employee', 'administrator', 'ict_technician'];
 
         if (!allowedRoles.includes(role)) {
             return res.status(400).json({
-                message: 'Invalid role. Role must be employee or admin.'
+                message: 'Invalid role. Role must be employee, administrator, or ict_technician.'
             });
         }
 
@@ -63,7 +64,265 @@ const updateUserRole = async (req, res) => {
     }
 };
 
+
+// Get all ICT technicians with their assigned skills
+const getTechnicians = async (req, res) => {
+    try {
+        const [technicians] = await pool.query(
+            `SELECT
+                u.id,
+                u.full_name,
+                u.email,
+                u.role,
+                ts.id AS skill_id,
+                ts.category
+             FROM users u
+             LEFT JOIN technician_skills ts
+                ON u.id = ts.user_id
+             WHERE u.role = 'ict_technician'
+             ORDER BY u.id ASC, ts.category ASC`
+        );
+
+        res.status(200).json({
+            message: 'Technicians retrieved successfully.',
+            technicians
+        });
+
+    } catch (error) {
+        console.error('Get technicians error:', error);
+
+        res.status(500).json({
+            message: 'An unexpected server error occurred.'
+        });
+    }
+};
+
+ // Add a skill to an ICT technician.
+ const addTechnicianSkill = async (req, res) => {
+    try {
+
+        const technicianId = req.params.id;
+        const { category } = req.body;
+
+
+        // Validate the skill/category.
+        const allowedCategories = [
+            'Network',
+            'Hardware',
+            'Software',
+            'Account'
+        ];
+
+        if (!allowedCategories.includes(category)) {
+            return res.status(400).json({
+                message: 'Invalid category.'
+            });
+        }
+
+
+        // Check that the user is an ICT technician.
+        const [technicians] = await pool.query(
+            `SELECT id
+             FROM users
+             WHERE id = ?
+             AND role = 'ict_technician'`,
+            [technicianId]
+        );
+
+        if (technicians.length === 0) {
+            return res.status(404).json({
+                message: 'ICT technician not found.'
+            });
+        }
+
+
+        // Check whether the technician already has
+        // this skill.
+        const [existingSkills] = await pool.query(
+            `SELECT id
+             FROM technician_skills
+             WHERE user_id = ?
+             AND category = ?`,
+            [technicianId, category]
+        );
+
+        if (existingSkills.length > 0) {
+            return res.status(409).json({
+                message: 'Technician already has this skill.'
+            });
+        }
+
+
+        // Add the new technician skill.
+        await pool.query(
+            `INSERT INTO technician_skills
+             (user_id, category)
+             VALUES (?, ?)`,
+            [technicianId, category]
+        );
+
+
+        return res.status(201).json({
+            message: 'Technician skill added successfully.'
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            'Add technician skill error:',
+            error
+        );
+
+        return res.status(500).json({
+            message: 'An unexpected server error occurred.'
+        });
+    }
+};
+
+// Remove a skill from an ICT technician.
+const removeTechnicianSkill = async (req, res) => {
+    try {
+
+        const technicianId = req.params.id;
+        const skillId = req.params.skillId;
+
+
+        // Check that the user is an ICT technician.
+        const [technicians] = await pool.query(
+            `SELECT id
+             FROM users
+             WHERE id = ?
+             AND role = 'ict_technician'`,
+            [technicianId]
+        );
+
+        if (technicians.length === 0) {
+            return res.status(404).json({
+                message: 'ICT technician not found.'
+            });
+        }
+
+
+        // Check that the skill belongs to this technician.
+        const [skills] = await pool.query(
+            `SELECT id
+             FROM technician_skills
+             WHERE id = ?
+             AND user_id = ?`,
+            [skillId, technicianId]
+        );
+
+        if (skills.length === 0) {
+            return res.status(404).json({
+                message: 'Technician skill not found.'
+            });
+        }
+
+
+        // Remove the skill.
+        await pool.query(
+            `DELETE FROM technician_skills
+             WHERE id = ?
+             AND user_id = ?`,
+            [skillId, technicianId]
+        );
+
+
+        return res.status(200).json({
+            message: 'Technician skill removed successfully.'
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            'Remove technician skill error:',
+            error
+        );
+
+        return res.status(500).json({
+            message: 'An unexpected server error occurred.'
+        });
+    }
+};
+
+/*
+    ============================================================
+    ADMIN - ACTIVE TICKETS
+    ============================================================
+*/
+
+// Get all active tickets for the administrator.
+const getActiveTickets = async (req, res) => {
+
+    try {
+
+        const [tickets] = await pool.query(
+
+            `SELECT
+                t.id,
+                t.subject,
+                t.description,
+                t.category,
+                t.priority,
+                t.status,
+                t.created_at,
+                t.assigned_to,
+                t.assigned_at,
+
+                requester.full_name AS requester_name,
+                requester.email AS requester_email,
+
+                technician.full_name AS technician_name
+
+             FROM tickets t
+
+             LEFT JOIN users requester
+                ON t.user_id = requester.id
+
+             LEFT JOIN users technician
+                ON t.assigned_to = technician.id
+
+             WHERE t.status NOT IN ('Resolved', 'Closed')
+
+             ORDER BY t.created_at DESC`
+        );
+
+
+        res.status(200).json({
+
+            message:
+                'Active tickets retrieved successfully.',
+
+            tickets
+
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            'Get active tickets error:',
+            error
+        );
+
+
+        res.status(500).json({
+
+            message:
+                'An unexpected server error occurred.'
+
+        });
+    }
+};
+
+
 module.exports = {
     getAllUsers,
-    updateUserRole
+    updateUserRole,
+    getTechnicians,
+    addTechnicianSkill,
+    removeTechnicianSkill,
+    getActiveTickets
 };
