@@ -630,6 +630,16 @@ const adminTicketCount =
         'adminTicketCount'
     );
 
+const adminOpenTicketCount = 
+    document.getElementById(
+        'adminOpenTicketCount'
+    );
+    
+const adminInProgressTicketCount = 
+    document.getElementById(
+        'adminInProgressTicketCount'
+    );    
+
 const adminUsersContainer =
     document.getElementById(
         'adminUsersContainer'
@@ -3592,7 +3602,32 @@ async function loadAdminTickets() {
                 tickets.length;
         }
 
+        const openTickets =
+            tickets.filter(
+                ticket =>
+                    (ticket.status || '').toLowerCase() === 'open'
+            ).length;
 
+
+        const inProgressTickets =
+            tickets.filter(
+                ticket =>
+                    (ticket.status || '').toLowerCase() === 'in progress'
+            ).length;
+
+
+if (adminOpenTicketCount) {
+
+    adminOpenTicketCount.textContent =
+        openTickets;
+}
+
+
+if (adminInProgressTicketCount) {
+
+    adminInProgressTicketCount.textContent =
+        inProgressTickets;
+}
         displayAdminTickets(
             tickets
         );
