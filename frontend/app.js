@@ -1962,6 +1962,8 @@ async function loadTechnicianDashboard() {
     ============================================================
 */
 
+let technicianTickets = [];
+
 async function loadTechnicianTickets() {
 
     if (!getToken()) {
@@ -1984,9 +1986,11 @@ async function loadTechnicianTickets() {
             data.tickets || [];
 
 
-        displayTechnicianTickets(
-            tickets
-        );
+        technicianTickets =
+            tickets;
+
+
+        applyTechnicianTicketFilters();
 
 
         updateTechnicianCounts(
@@ -2011,6 +2015,192 @@ async function loadTechnicianTickets() {
     }
 }
 
+/*
+    ============================================================
+    SCRUM-30 - FILTER TECHNICIAN TICKETS
+    ============================================================
+*/
+
+function applyTechnicianTicketFilters() {
+
+    const searchValue =
+        technicianTicketSearch
+            ? technicianTicketSearch.value
+                .trim()
+                .toLowerCase()
+            : '';
+
+
+    const statusValue =
+        technicianStatusFilter
+            ? technicianStatusFilter.value
+            : '';
+
+
+    const priorityValue =
+        technicianPriorityFilter
+            ? technicianPriorityFilter.value
+            : '';
+
+
+    const categoryValue =
+        technicianCategoryFilter
+            ? technicianCategoryFilter.value
+            : '';
+
+
+    const filteredTickets =
+        technicianTickets.filter(
+            ticket => {
+
+                const subject =
+                    String(
+                        ticket.subject ||
+                        ticket.title ||
+                        ''
+                    ).toLowerCase();
+
+
+                const category =
+                    String(
+                        ticket.category ||
+                        ''
+                    ).toLowerCase();
+
+
+                const matchesSearch =
+                    !searchValue ||
+                    subject.includes(
+                        searchValue
+                    ) ||
+                    category.includes(
+                        searchValue
+                    );
+
+
+                const matchesStatus =
+                    !statusValue ||
+                    String(
+                        ticket.status ||
+                        ''
+                    ).toLowerCase() ===
+                    statusValue.toLowerCase();
+
+
+                const matchesPriority =
+                    !priorityValue ||
+                    String(
+                        ticket.priority ||
+                        ''
+                    ).toLowerCase() ===
+                    priorityValue.toLowerCase();
+
+
+                const matchesCategory =
+                    !categoryValue ||
+                    String(
+                        ticket.category ||
+                        ''
+                    ).toLowerCase() ===
+                    categoryValue.toLowerCase();
+
+
+                return (
+                    matchesSearch &&
+                    matchesStatus &&
+                    matchesPriority &&
+                    matchesCategory
+                );
+            }
+        );
+
+
+    displayTechnicianTickets(
+        filteredTickets
+    );
+}
+
+
+/*
+    ============================================================
+    SCRUM-30 - FILTER EVENTS
+    ============================================================
+*/
+
+if (technicianTicketSearch) {
+
+    technicianTicketSearch.addEventListener(
+        'input',
+        applyTechnicianTicketFilters
+    );
+}
+
+
+if (technicianStatusFilter) {
+
+    technicianStatusFilter.addEventListener(
+        'change',
+        applyTechnicianTicketFilters
+    );
+}
+
+
+if (technicianPriorityFilter) {
+
+    technicianPriorityFilter.addEventListener(
+        'change',
+        applyTechnicianTicketFilters
+    );
+}
+
+
+if (technicianCategoryFilter) {
+
+    technicianCategoryFilter.addEventListener(
+        'change',
+        applyTechnicianTicketFilters
+    );
+}
+
+
+if (clearTechnicianFiltersButton) {
+
+    clearTechnicianFiltersButton.addEventListener(
+        'click',
+        function () {
+
+            if (technicianTicketSearch) {
+
+                technicianTicketSearch.value =
+                    '';
+            }
+
+
+            if (technicianStatusFilter) {
+
+                technicianStatusFilter.value =
+                    '';
+            }
+
+
+            if (technicianPriorityFilter) {
+
+                technicianPriorityFilter.value =
+                    '';
+            }
+
+
+            if (technicianCategoryFilter) {
+
+                technicianCategoryFilter.value =
+                    '';
+            }
+
+
+            applyTechnicianTicketFilters();
+        }
+    );
+}
 
 function updateTechnicianCounts(tickets) {
 
