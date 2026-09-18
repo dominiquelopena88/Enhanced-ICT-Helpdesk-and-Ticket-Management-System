@@ -1,55 +1,48 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
 
-    <!--
-        Makes the website responsive on phones, tablets,
-        and desktop screens.
-    -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <!-- Browser tab title -->
     <title>Enhanced ICT Helpdesk</title>
 
-    <!--
-        Connect this HTML page to our external CSS file.
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 
-        Keeping CSS separate means we can redesign the
-        appearance later without changing the application logic.
-    -->
-    <link rel="stylesheet" href="style.css">
 </head>
 
 
 <body>
 
-    <!--
-        =========================================================
-        MAIN APPLICATION CONTAINER
-        =========================================================
+    <!-- ====================================================
+         SKIP LINK
+         ==================================================== -->
 
-        This container holds the different screens of the
-        application:
-
-        1. Login
-        2. Registration
-        3. My Tickets
-
-        JavaScript controls which section is visible.
-    -->
-    <main class="container">
+    <a
+        href="#mainContent"
+        class="skip-link"
+    >
+        Skip to main content
+    </a>
 
 
-        <!-- =====================================================
-             WEBSITE HEADER
-             =====================================================
+    <main
+        id="mainContent"
+        class="container"
+    >
 
-             This is always displayed at the top of the page
-             while the user is not logged in.
-        -->
+
+        <!-- ====================================================
+             PAGE HEADER
+             ==================================================== -->
 
         <header class="page-header">
 
@@ -58,101 +51,61 @@
             </h1>
 
             <p>
-                ICT Helpdesk and Ticket Management System
+                ICT Ticket Management System
             </p>
 
         </header>
 
 
-        <!-- =====================================================
+
+        <!-- ====================================================
              LOGIN SECTION
-             =====================================================
-
-             IMPORTANT:
-
-             Login is now the DEFAULT screen.
-
-             The user will see this section first when opening
-             the website.
-
-             If the user does not have an account, they can
-             click the Register button below the login form.
-
-             The ID names below MUST remain unchanged because
-             frontend/app.js uses them to find these elements.
-        -->
+             ==================================================== -->
 
         <section
             id="loginSection"
             class="auth-section"
-            aria-labelledby="loginHeading"
         >
 
-            <h2 id="loginHeading">
-                Welcome Back
+            <h2>
+                Login
             </h2>
 
-            <p class="section-description">
-                Log in to access your ICT support tickets.
-            </p>
 
-
-            <!--
-                LOGIN FORM
-
-                JavaScript listens for the submit event and sends
-                the email and password to:
-
-                POST /api/auth/login
-
-                The backend then:
-
-                1. Finds the user.
-                2. Checks the password using bcrypt.
-                3. Creates a JWT.
-                4. Sends the token back to this frontend.
-            -->
             <form id="loginForm">
 
-                <!-- Email field -->
                 <div class="form-group">
 
-                    <label for="email">
+                    <label for="loginEmail">
                         Email
                     </label>
 
                     <input
                         type="email"
-                        id="email"
+                        id="loginEmail"
                         name="email"
-                        placeholder="Enter your email"
-                        autocomplete="username"
                         required
                     >
 
                 </div>
 
 
-                <!-- Password field -->
                 <div class="form-group">
 
-                    <label for="password">
+                    <label for="loginPassword">
                         Password
                     </label>
 
                     <input
                         type="password"
-                        id="password"
+                        id="loginPassword"
                         name="password"
-                        placeholder="Enter your password"
-                        autocomplete="current-password"
                         required
                     >
 
                 </div>
 
 
-                <!-- Login button -->
                 <button
                     type="submit"
                     class="primary-button"
@@ -163,25 +116,12 @@
             </form>
 
 
-            <!--
-                JavaScript displays login success or error
-                messages in this paragraph.
-            -->
             <p
                 id="loginMessage"
                 class="form-message"
-                aria-live="polite"
             ></p>
 
 
-            <!--
-                REGISTRATION LINK
-
-                This does NOT submit a form.
-
-                app.js listens for this button and changes
-                the visible section from Login to Registration.
-            -->
             <div class="switch-auth">
 
                 <p>
@@ -193,7 +133,7 @@
                     id="showRegistrationButton"
                     class="secondary-button"
                 >
-                    Create an account
+                    Register
                 </button>
 
             </div>
@@ -201,70 +141,40 @@
         </section>
 
 
-        <!-- =====================================================
+
+        <!-- ====================================================
              REGISTRATION SECTION
-             =====================================================
-
-             This section starts HIDDEN.
-
-             It becomes visible when the user clicks:
-
-             "Create an account"
-
-             Registration sends information to:
-
-             POST /api/auth/register
-
-             The backend then hashes the password with bcrypt
-             before storing the account in MySQL.
-
-             Role is intentionally NOT included in this form.
-
-             New public registrations are treated as employees.
-             Admin accounts should be managed separately rather
-             than allowing anyone to register themselves as admin.
-        -->
+             ==================================================== -->
 
         <section
             id="registrationSection"
             class="auth-section"
-            aria-labelledby="registrationHeading"
-            hidden
+            style="display: none;"
         >
 
-            <h2 id="registrationHeading">
-                Create Employee Account
+            <h2>
+                Register
             </h2>
 
-            <p class="section-description">
-                Register an account to submit and manage your
-                ICT support tickets.
-            </p>
 
+            <form id="registrationForm">
 
-            <!-- Registration form -->
-            <form id="registrationForm" autocomplete="off">
-
-                <!-- Full name -->
                 <div class="form-group">
 
-                    <label for="registerFullName">
+                    <label for="registerName">
                         Full Name
                     </label>
 
                     <input
                         type="text"
-                        id="registerFullName"
+                        id="registerName"
                         name="full_name"
-                        placeholder="Enter your full name"
-                        autocomplete="name"
                         required
                     >
 
                 </div>
 
 
-                <!-- Email -->
                 <div class="form-group">
 
                     <label for="registerEmail">
@@ -275,15 +185,12 @@
                         type="email"
                         id="registerEmail"
                         name="email"
-                        placeholder="Enter your email"
-                        autocomplete="email"
                         required
                     >
 
                 </div>
 
 
-                <!-- Password -->
                 <div class="form-group">
 
                     <label for="registerPassword">
@@ -294,15 +201,12 @@
                         type="password"
                         id="registerPassword"
                         name="password"
-                        placeholder="Create a password"
-                        autocomplete="new-password"
                         required
                     >
 
                 </div>
 
 
-                <!-- Register button -->
                 <button
                     type="submit"
                     class="primary-button"
@@ -313,27 +217,13 @@
             </form>
 
 
-            <!--
-                JavaScript displays registration success or
-                error messages here.
-            -->
             <p
                 id="registrationMessage"
                 class="form-message"
-                aria-live="polite"
             ></p>
 
 
-            <!--
-                Button to return to Login.
-
-                app.js listens for this button.
-            -->
             <div class="switch-auth">
-
-                <p>
-                    Already have an account?
-                </p>
 
                 <button
                     type="button"
@@ -348,54 +238,548 @@
         </section>
 
 
-        <!-- =====================================================
-             MY TICKETS SECTION
-             =====================================================
 
-             This section starts hidden.
-
-             It becomes visible after successful login.
-
-             JavaScript requests the employee's tickets from:
-
-             GET /api/tickets
-
-             The JWT token is placed in the Authorization header.
-
-             The backend then uses the logged-in user's ID to
-             return only that employee's tickets.
-        -->
+        <!-- ====================================================
+             EMPLOYEE SECTION
+             ==================================================== -->
 
         <section
-            id="ticketsSection"
-            class="tickets-section"
-            aria-labelledby="ticketsHeading"
-            hidden
+            id="employeeSection"
+            class="employee-section"
+            style="display: none;"
         >
 
-            <div class="tickets-header">
+            <div class="employee-top-bar">
 
-                <div>
+                <div class="employee-welcome">
 
-                    <h2 id="ticketsHeading">
-                        My Tickets
+                    <h2>
+                        Employee Portal
                     </h2>
 
-                    <p>
-                        View the ICT support tickets submitted
-                        from your account.
+                    <p id="employeeWelcome">
+                        Welcome.
                     </p>
 
                 </div>
 
 
-                <!--
-                    Logout removes the JWT from localStorage
-                    and returns the user to the Login screen.
-                -->
+                <div class="employee-top-actions">
+
+                    <div class="accessibility-container">
+
+                        <button
+                            type="button"
+                            id="accessibilityButton"
+                            class="secondary-button accessibility-button"
+                        >
+                            Accessibility
+                        </button>
+
+
+                        <div
+                            id="accessibilityPanel"
+                            class="accessibility-panel"
+                            style="display: none;"
+                        >
+
+                            <h3>
+                                Accessibility
+                            </h3>
+
+
+                            <div class="accessibility-option">
+
+                                <span>
+                                    Text Size
+                                </span>
+
+
+                                <div class="accessibility-buttons">
+
+                                    <button
+                                        type="button"
+                                        id="decreaseTextButton"
+                                    >
+                                        A-
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        id="resetTextButton"
+                                    >
+                                        A
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        id="increaseTextButton"
+                                    >
+                                        A+
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="accessibility-option">
+
+                                <span>
+                                    High Contrast
+                                </span>
+
+                                <button
+                                    type="button"
+                                    id="contrastButton"
+                                    class="secondary-button"
+                                >
+                                    Toggle
+                                </button>
+
+                            </div>
+
+
+                            <button
+                                type="button"
+                                id="resetAccessibilityButton"
+                                class="secondary-button reset-accessibility-button"
+                            >
+                                Reset Accessibility
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        id="logoutButton"
+                        class="secondary-button"
+                    >
+                        Logout
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 EMPLOYEE DASHBOARD
+                 ================================================= -->
+
+            <section
+                id="dashboardSection"
+                class="dashboard-section"
+            >
+
+                <div class="dashboard-header">
+
+                    <h2>
+                        Employee Dashboard
+                    </h2>
+
+                    <p>
+                        Submit and track your ICT support tickets.
+                    </p>
+
+                </div>
+
+
+                <div class="dashboard-cards">
+
+                    <div class="dashboard-card">
+
+                        <h3>
+                            Total Tickets
+                        </h3>
+
+                        <p id="totalTicketsCount">
+                            0
+                        </p>
+
+                    </div>
+
+
+                    <div class="dashboard-card">
+
+                        <h3>
+                            Open
+                        </h3>
+
+                        <p id="openTicketsCount">
+                            0
+                        </p>
+
+                    </div>
+
+
+                    <div class="dashboard-card">
+
+                        <h3>
+                            In Progress
+                        </h3>
+
+                        <p id="inProgressTicketsCount">
+                            0
+                        </p>
+
+                    </div>
+
+
+                    <div class="dashboard-card">
+
+                        <h3>
+                            Resolved
+                        </h3>
+
+                        <p id="resolvedTicketsCount">
+                            0
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="dashboard-actions">
+
+                    <button
+                        type="button"
+                        id="showSubmitTicketButton"
+                        class="primary-button"
+                    >
+                        Submit Ticket
+                    </button>
+
+
+                    <button
+                        type="button"
+                        id="showMyTicketsButton"
+                        class="secondary-button"
+                    >
+                        My Tickets
+                    </button>
+
+
+                    <button
+                        type="button"
+                        id="showTrackTicketButton"
+                        class="secondary-button"
+                    >
+                        Track Ticket
+                    </button>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 SUBMIT TICKET
+                 ================================================= -->
+
+            <section
+                id="submitTicketSection"
+                class="module-section"
+                style="display: none;"
+            >
+
+                <div class="module-header">
+
+                    <div>
+
+                        <h2>
+                            Submit a Ticket
+                        </h2>
+
+                        <p>
+                            Describe the ICT issue that you need help with.
+                        </p>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        id="backToEmployeeDashboardButton"
+                        class="secondary-button"
+                    >
+                        Back to Dashboard
+                    </button>
+
+                </div>
+
+
+                <form id="ticketForm">
+
+                    <div class="form-group">
+
+                        <label for="ticketTitle">
+                            Ticket Title
+                        </label>
+
+                        <input
+                            type="text"
+                            id="ticketTitle"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="classification-info">
+                        <strong>Automated Classification</strong>
+                        <p>
+                            The system will automatically classify this ticket
+                            based on the ticket title and description.
+                        </p>
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="ticketDescription">
+                            Description
+                        </label>
+
+                        <textarea
+                            id="ticketDescription"
+                            rows="6"
+                            required
+                        ></textarea>
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="primary-button"
+                    >
+                        Submit Ticket
+                    </button>
+
+                </form>
+
+
+                <p
+                    id="ticketMessage"
+                    class="form-message"
+                ></p>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 MY TICKETS
+                 ================================================= -->
+
+            <section
+                id="myTicketsSection"
+                class="module-section"
+                style="display: none;"
+            >
+
+                <div class="module-header">
+
+                    <div>
+
+                        <h2>
+                            My Tickets
+                        </h2>
+
+                        <p>
+                            View the tickets you have submitted.
+                        </p>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        id="backFromMyTicketsButton"
+                        class="secondary-button"
+                    >
+                        Back to Dashboard
+                    </button>
+
+                </div>
+
+
+                <div class="table-wrapper">
+
+                    <table class="tickets-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    ID
+                                </th>
+
+                                <th>
+                                    Title
+                                </th>
+
+                                <th>
+                                    Category
+                                </th>
+
+                                <th>
+                                    Status
+                                </th>
+
+                                <th>
+                                    Assigned Technician
+                                </th>
+
+                                <th>
+                                    Technician Update
+                                </th>
+
+                                <th>
+                                    Resolved By
+                                </th>
+
+                                <th>
+                                    Resolved Date
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="myTicketsTableBody">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 TRACK TICKET
+                 ================================================= -->
+
+            <section
+                id="trackTicketSection"
+                class="module-section"
+                style="display: none;"
+            >
+
+                <div class="module-header">
+
+                    <div>
+
+                        <h2>
+                            Track Ticket
+                        </h2>
+
+                        <p>
+                            Enter a ticket ID to view its current status.
+                        </p>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        id="backFromTrackTicketButton"
+                        class="secondary-button"
+                    >
+                        Back to Dashboard
+                    </button>
+
+                </div>
+
+
+                <form
+                    id="trackTicketForm"
+                    class="track-ticket-form"
+                >
+
+                    <div class="form-group">
+
+                        <label for="trackTicketId">
+                            Ticket ID
+                        </label>
+
+                        <input
+                            type="number"
+                            id="trackTicketId"
+                            min="1"
+                            required
+                        >
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="primary-button"
+                    >
+                        Track
+                    </button>
+
+                </form>
+
+
+                <p
+                    id="trackTicketMessage"
+                    class="form-message"
+                ></p>
+
+
+                <div
+                    id="trackedTicketResult"
+                    class="tracked-ticket-result"
+                    style="display: none;"
+                ></div>
+
+            </section>
+
+        </section>
+
+
+
+        <!-- ====================================================
+             TECHNICIAN SECTION
+             ==================================================== -->
+
+        <section
+            id="technicianSection"
+            class="technician-section"
+            style="display: none;"
+        >
+
+            <div class="technician-top-bar">
+
+                <div class="technician-welcome">
+
+                    <h2>
+                        Technician Portal
+                    </h2>
+
+                    <p id="technicianWelcome">
+                        Welcome.
+                    </p>
+
+                </div>
+
+
                 <button
-                    id="logoutButton"
                     type="button"
+                    id="technicianLogoutButton"
                     class="secondary-button"
                 >
                     Logout
@@ -404,52 +788,489 @@
             </div>
 
 
-            <!--
-                JavaScript displays loading, success, and
-                error messages here.
-            -->
-            <p
-                id="ticketsMessage"
-                class="form-message"
-                aria-live="polite"
-            ></p>
+
+            <!-- =================================================
+                 TECHNICIAN DASHBOARD
+                 ================================================= -->
+
+            <section class="technician-dashboard">
+
+                <div class="dashboard-header">
+
+                    <h2>
+                        Technician Dashboard
+                    </h2>
+
+                    <p>
+                        View and manage tickets assigned to you.
+                    </p>
+
+                </div>
 
 
-            <!--
-                JavaScript dynamically creates ticket cards
-                and inserts them inside this container.
-            -->
-            <div id="ticketsContainer"></div>
+                <div class="dashboard-cards">
+
+                    <div class="dashboard-card">
+
+                        <h3>
+                            Assigned Tickets
+                        </h3>
+
+                        <p id="technicianAssignedCount">
+                            0
+                        </p>
+
+                    </div>
+
+
+                    <div class="dashboard-card">
+
+                        <h3>
+                            Open
+                        </h3>
+
+                        <p id="technicianOpenCount">
+                            0
+                        </p>
+
+                    </div>
+
+
+                    <div class="dashboard-card">
+
+                        <h3>
+                            In Progress
+                        </h3>
+
+                        <p id="technicianInProgressCount">
+                            0
+                        </p>
+
+                    </div>
+
+
+                    <div class="dashboard-card">
+
+                        <h3>
+                            Resolved
+                        </h3>
+
+                        <p id="technicianResolvedCount">
+                            0
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- Assigned tickets -->
+
+                <div class="module-section">
+
+                    <div class="module-header">
+
+                        <div>
+
+                            <h2>
+                                Assigned Tickets
+                            </h2>
+
+                            <p>
+                                Tickets currently assigned to you.
+                            </p>
+
+                        </div>
+
+
+                        <button
+                            type="button"
+                            id="refreshTechnicianTicketsButton"
+                            class="secondary-button"
+                        >
+                            Refresh
+                        </button>
+
+                    </div>
+
+
+                    <div class="table-wrapper">
+
+                        <table class="tickets-table">
+
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Title</th>
+                                    <th>Category</th>
+                                    <th>Status</th>
+                                    <th>Assigned Technician</th>
+                                    <th>Technician Update</th>
+                                    <th>Resolved By</th>
+                                    <th>Resolved Date</th>
+                                </tr>
+                            </thead>
+
+
+                            <tbody id="technicianTicketsTableBody">
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+
+                    <p
+                        id="technicianTicketMessage"
+                        class="form-message"
+                    ></p>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 TECHNICIAN TICKET DETAILS
+                 ================================================= -->
+
+            <section
+                id="technicianTicketDetailsSection"
+                class="module-section"
+                style="display: none;"
+            >
+
+                <div class="module-header">
+
+                    <div>
+
+                        <h2>
+                            Ticket Details
+                        </h2>
+
+                        <p>
+                            Review and update the selected ticket.
+                        </p>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        id="backToTechnicianDashboardButton"
+                        class="secondary-button"
+                    >
+                        Back to Dashboard
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="technicianTicketDetails"
+                    class="tracked-ticket-result"
+                >
+                </div>
+
+
+                <form id="technicianUpdateTicketForm">
+
+                    <div class="form-group">
+
+                        <label for="technicianTicketStatus">
+                            Update Status
+                        </label>
+
+                        <select id="technicianTicketStatus">
+
+                            <option value="Open">
+                                Open
+                            </option>
+
+                            <option value="In Progress">
+                                In Progress
+                            </option>
+
+                            <option value="Resolved">
+                                Resolved
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="technicianTicketComment">
+                            Technician Comment
+                        </label>
+
+                        <textarea
+                            id="technicianTicketComment"
+                            rows="5"
+                            placeholder="Add an update or comment..."
+                        ></textarea>
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="primary-button"
+                    >
+                        Update Ticket
+                    </button>
+
+                </form>
+
+
+                <p
+                    id="technicianUpdateMessage"
+                    class="form-message"
+                ></p>
+
+            </section>
 
         </section>
+
+
+
+        <!-- ====================================================
+             ADMIN SECTION
+             ==================================================== -->
+
+        <section
+            id="adminSection"
+            style="display: none;"
+        >
+
+
+            <!-- =================================================
+                 ADMIN TOP BAR
+                 ================================================= -->
+
+            <div class="admin-top-bar">
+
+                <div>
+
+                    <h2>
+                        Administrator Portal
+                    </h2>
+
+                    <p id="adminWelcome">
+                        Welcome.
+                    </p>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    id="adminLogoutButton"
+                    class="secondary-button"
+                >
+                    Logout
+                </button>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 ADMIN DASHBOARD
+                 ================================================= -->
+
+            <section class="dashboard-section">
+
+                <div class="dashboard-header">
+
+                    <h2>
+                        Administrator Dashboard
+                    </h2>
+
+                    <p>
+                        Monitor users, technicians and tickets.
+                    </p>
+
+                </div>
+
+
+                <div class="dashboard-cards">
+
+                    <div class="dashboard-card">
+
+                        <h3>
+                            Total Users
+                        </h3>
+
+                        <p id="adminTotalUsersCount">
+                            0
+                        </p>
+
+                    </div>
+
+
+                    <div class="dashboard-card">
+
+                        <h3>
+                            Employees
+                        </h3>
+
+                        <p id="adminEmployeeCount">
+                            0
+                        </p>
+
+                    </div>
+
+
+                    <div class="dashboard-card">
+
+                        <h3>
+                            Technicians
+                        </h3>
+
+                        <p id="adminTechnicianCount">
+                            0
+                        </p>
+
+                    </div>
+
+
+                    <div class="dashboard-card">
+
+                        <h3>
+                            Active Tickets
+                        </h3>
+
+                        <p id="adminTicketCount">
+                            0
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 TECHNICIAN MANAGEMENT
+                 ================================================= -->
+
+            <section class="module-section">
+
+                <div class="module-header">
+
+                    <div>
+
+                        <h2>
+                            Technician Management
+                        </h2>
+
+                        <p>
+                            Manage technician skills.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div id="adminTechniciansContainer">
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 ACTIVE TICKETS
+                 ================================================= -->
+
+            <section class="module-section">
+
+                <div class="module-header">
+
+                    <div>
+
+                        <h2>
+                            Active Tickets
+                        </h2>
+
+                        <p>
+                            Monitor all currently active ICT tickets.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="adminTicketsContainer"
+                    class="table-wrapper"
+                >
+
+                    <p>
+                        Loading active tickets...
+                    </p>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 USER MANAGEMENT
+                 ================================================= -->
+
+            <section class="module-section">
+
+                <div class="module-header">
+
+                    <div>
+
+                        <h2>
+                            User Management
+                        </h2>
+
+                        <p>
+                            Manage user roles.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="adminUsersContainer"
+                    class="table-wrapper"
+                >
+                </div>
+
+            </section>
+
+
+        </section>
+
 
     </main>
 
 
-    <!--
-        =========================================================
-        FRONTEND JAVASCRIPT
-        =========================================================
 
-        Load app.js after the HTML.
+    <!-- ========================================================
+         JAVASCRIPT
+         ======================================================== -->
 
-        This is important because app.js uses:
-
-            document.getElementById()
-
-        to find elements such as:
-
-            loginForm
-            registrationForm
-            ticketsContainer
-            logoutButton
-
-        All those elements have already been created above
-        before JavaScript starts running.
-    -->
     <script src="app.js"></script>
+
 
 </body>
 
 </html>
-```

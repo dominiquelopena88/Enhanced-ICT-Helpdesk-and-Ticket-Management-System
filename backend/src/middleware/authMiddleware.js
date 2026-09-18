@@ -59,6 +59,10 @@ function authorizeRoles(...allowedRoles) {
             });
         }
 
+        // TEMPORARY DEBUGGING
+        console.log('JWT USER:', req.user);
+        console.log('ALLOWED ROLES:', allowedRoles);
+
         // Check whether the user's role is allowed.
         if (!allowedRoles.includes(req.user.role)) {
             return res.status(403).json({
