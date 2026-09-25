@@ -328,10 +328,27 @@ const getTicketAnalytics = async (req, res) => {
 
     try {
 
+        const { fromDate, toDate } = req.query;
+
+        let dateCondition = '';
+        const queryParams = [];
+
+        if (fromDate && toDate) {
+            dateCondition =
+                ' WHERE created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY) ';
+
+            queryParams.push(
+                fromDate,
+                toDate
+            );
+        }
+
         // Get total number of tickets.
         const [totalTickets] = await pool.query(
             `SELECT COUNT(*) AS total
-             FROM tickets`
+             FROM tickets
+             ${dateCondition}`,
+            queryParams
         );
 
 
@@ -341,8 +358,10 @@ const getTicketAnalytics = async (req, res) => {
                 status,
                 COUNT(*) AS count
              FROM tickets
+             ${dateCondition}
              GROUP BY status
-             ORDER BY status`
+             ORDER BY status`,
+            queryParams
         );
 
 
@@ -352,8 +371,10 @@ const getTicketAnalytics = async (req, res) => {
                 category,
                 COUNT(*) AS count
              FROM tickets
+             ${dateCondition}
              GROUP BY category
-             ORDER BY category`
+             ORDER BY category`,
+            queryParams
         );
 
 
@@ -363,8 +384,10 @@ const getTicketAnalytics = async (req, res) => {
                 priority,
                 COUNT(*) AS count
              FROM tickets
+             ${dateCondition}
              GROUP BY priority
-             ORDER BY priority`
+             ORDER BY priority`,
+            queryParams
         );
 
 
@@ -377,9 +400,16 @@ const getTicketAnalytics = async (req, res) => {
              FROM users u
              LEFT JOIN tickets t
                 ON t.assigned_to = u.id
+                ${fromDate && toDate
+                    ? `AND t.created_at >= ?
+                       AND t.created_at < DATE_ADD(?, INTERVAL 1 DAY)`
+                    : ''}
              WHERE u.role = 'ict_technician'
              GROUP BY u.id, u.full_name
-             ORDER BY ticket_count DESC, u.full_name ASC`
+             ORDER BY ticket_count DESC, u.full_name ASC`,
+            fromDate && toDate
+                ? [fromDate, toDate]
+                : []
         );
 
 
