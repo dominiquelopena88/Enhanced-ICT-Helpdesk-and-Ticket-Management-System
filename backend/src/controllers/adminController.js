@@ -317,6 +317,107 @@ const getActiveTickets = async (req, res) => {
     }
 };
 
+/*
+    ============================================================
+    ADMIN - TICKET ANALYTICS
+    ============================================================
+*/
+
+// Get ticket analytics for the administrator.
+const getTicketAnalytics = async (req, res) => {
+
+    try {
+
+        // Get total number of tickets.
+        const [totalTickets] = await pool.query(
+            `SELECT COUNT(*) AS total
+             FROM tickets`
+        );
+
+
+        // Get ticket count by status.
+        const [statusBreakdown] = await pool.query(
+            `SELECT
+                status,
+                COUNT(*) AS count
+             FROM tickets
+             GROUP BY status
+             ORDER BY status`
+        );
+
+
+        // Get ticket count by category.
+        const [categoryBreakdown] = await pool.query(
+            `SELECT
+                category,
+                COUNT(*) AS count
+             FROM tickets
+             GROUP BY category
+             ORDER BY category`
+        );
+
+
+        // Get ticket count by priority.
+        const [priorityBreakdown] = await pool.query(
+            `SELECT
+                priority,
+                COUNT(*) AS count
+             FROM tickets
+             GROUP BY priority
+             ORDER BY priority`
+        );
+
+
+        // Get number of tickets assigned to each ICT technician.
+        const [technicianWorkload] = await pool.query(
+            `SELECT
+                u.id AS technician_id,
+                u.full_name AS technician_name,
+                COUNT(t.id) AS ticket_count
+             FROM users u
+             LEFT JOIN tickets t
+                ON t.assigned_to = u.id
+             WHERE u.role = 'ict_technician'
+             GROUP BY u.id, u.full_name
+             ORDER BY ticket_count DESC, u.full_name ASC`
+        );
+
+
+        res.status(200).json({
+
+            message:
+                'Ticket analytics retrieved successfully.',
+
+            totalTickets:
+                totalTickets[0].total,
+
+            statusBreakdown,
+
+            categoryBreakdown,
+
+            priorityBreakdown,
+
+            technicianWorkload
+
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            'Get ticket analytics error:',
+            error
+        );
+
+
+        res.status(500).json({
+
+            message:
+                'An unexpected server error occurred.'
+
+        });
+    }
+};
 
 module.exports = {
     getAllUsers,
@@ -324,5 +425,6 @@ module.exports = {
     getTechnicians,
     addTechnicianSkill,
     removeTechnicianSkill,
-    getActiveTickets
+    getActiveTickets,
+    getTicketAnalytics
 };

@@ -655,6 +655,46 @@ const adminTicketsContainer =
         'adminTicketsContainer'
     );
 
+    const analyticsTotalTickets =
+    document.getElementById(
+        'analyticsTotalTickets'
+    );
+
+const analyticsOpenTickets =
+    document.getElementById(
+        'analyticsOpenTickets'
+    );
+
+const analyticsInProgressTickets =
+    document.getElementById(
+        'analyticsInProgressTickets'
+    );
+
+const analyticsResolvedTickets =
+    document.getElementById(
+        'analyticsResolvedTickets'
+    );
+
+const analyticsStatusContainer =
+    document.getElementById(
+        'analyticsStatusContainer'
+    );
+
+const analyticsCategoryContainer =
+    document.getElementById(
+        'analyticsCategoryContainer'
+    );
+
+const analyticsPriorityContainer =
+    document.getElementById(
+        'analyticsPriorityContainer'
+    );
+
+const analyticsTechnicianContainer =
+    document.getElementById(
+        'analyticsTechnicianContainer'
+    );    
+
 const adminTicketsSection =
     document.getElementById(
         'adminTicketsSection'
@@ -2759,6 +2799,8 @@ async function loadAdminDashboard() {
     await loadAdminTechnicians();
 
     await loadAdminTickets();
+
+    await loadTicketAnalytics();
 }
 
 
@@ -3616,21 +3658,21 @@ async function loadAdminTickets() {
             ).length;
 
 
-if (adminOpenTicketCount) {
+        if (adminOpenTicketCount) {
 
-    adminOpenTicketCount.textContent =
-        openTickets;
-}
+            adminOpenTicketCount.textContent =
+                openTickets;
+        }
 
 
-if (adminInProgressTicketCount) {
+        if (adminInProgressTicketCount) {
 
-    adminInProgressTicketCount.textContent =
-        inProgressTickets;
-}
-        displayAdminTickets(
-            tickets
-        );
+            adminInProgressTicketCount.textContent =
+                inProgressTickets;
+        }
+                displayAdminTickets(
+                    tickets
+                );
 
     } catch (error) {
 
@@ -3655,6 +3697,274 @@ if (adminInProgressTicketCount) {
     }
 }
 
+async function loadTicketAnalytics() {
+
+    try {
+
+        const response = await fetch(
+            `${API_BASE_URL}/admin/tickets/analytics`,
+            {
+                method: 'GET',
+
+                headers: {
+                    'Authorization':
+                        `Bearer ${localStorage.getItem('token')}`
+                }
+            }
+        );
+
+
+        const data = await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.message ||
+                'Unable to load ticket analytics.'
+            );
+
+        }
+
+
+        // Total tickets.
+
+        if (analyticsTotalTickets) {
+
+            analyticsTotalTickets.textContent =
+                data.totalTickets || 0;
+
+        }
+
+
+        // Status counts.
+
+        const statusCounts = {};
+
+        data.statusBreakdown.forEach(
+            item => {
+
+                statusCounts[item.status] =
+                    item.count;
+
+            }
+        );
+
+
+        if (analyticsOpenTickets) {
+
+            analyticsOpenTickets.textContent =
+                statusCounts['Open'] || 0;
+
+        }
+
+
+        if (analyticsInProgressTickets) {
+
+            analyticsInProgressTickets.textContent =
+                statusCounts['In Progress'] || 0;
+
+        }
+
+
+        if (analyticsResolvedTickets) {
+
+            analyticsResolvedTickets.textContent =
+                statusCounts['Resolved'] || 0;
+
+        }
+
+
+        // Display status breakdown.
+
+        displayAnalyticsTable(
+            analyticsStatusContainer,
+            data.statusBreakdown,
+            'Status'
+        );
+
+
+        // Display category breakdown.
+
+        displayAnalyticsTable(
+            analyticsCategoryContainer,
+            data.categoryBreakdown,
+            'Category'
+        );
+
+
+        // Display priority breakdown.
+
+        displayAnalyticsTable(
+            analyticsPriorityContainer,
+            data.priorityBreakdown,
+            'Priority'
+        );
+
+
+        // Display technician workload.
+
+        displayTechnicianWorkload(
+            data.technicianWorkload
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            'Ticket analytics error:',
+            error
+        );
+
+
+        if (analyticsStatusContainer) {
+
+            analyticsStatusContainer.innerHTML =
+                '<p>Unable to load ticket analytics.</p>';
+
+        }
+
+    }
+
+}
+
+function displayAnalyticsTable(
+    container,
+    rows,
+    label
+) {
+
+    if (!container) {
+        return;
+    }
+
+
+    if (!rows || rows.length === 0) {
+
+        container.innerHTML =
+            '<p>No analytics data available.</p>';
+
+        return;
+
+    }
+
+
+    container.innerHTML = `
+
+        <table class="tickets-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        ${label}
+                    </th>
+
+                    <th>
+                        Tickets
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                ${rows.map(item => `
+
+                    <tr>
+
+                        <td>
+                            ${item.status ||
+                              item.category ||
+                              item.priority}
+                        </td>
+
+                        <td>
+                            ${item.count}
+                        </td>
+
+                    </tr>
+
+                `).join('')}
+
+            </tbody>
+
+        </table>
+
+    `;
+
+}
+
+
+function displayTechnicianWorkload(
+    technicians
+) {
+
+    if (!analyticsTechnicianContainer) {
+        return;
+    }
+
+
+    if (
+        !technicians ||
+        technicians.length === 0
+    ) {
+
+        analyticsTechnicianContainer.innerHTML =
+            '<p>No technician workload data available.</p>';
+
+        return;
+
+    }
+
+
+    analyticsTechnicianContainer.innerHTML = `
+
+        <table class="tickets-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        Technician
+                    </th>
+
+                    <th>
+                        Assigned Tickets
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                ${technicians.map(technician => `
+
+                    <tr>
+
+                        <td>
+                            ${technician.technician_name}
+                        </td>
+
+                        <td>
+                            ${technician.ticket_count}
+                        </td>
+
+                    </tr>
+
+                `).join('')}
+
+            </tbody>
+
+        </table>
+
+    `;
+
+}
 
 /*
     ============================================================
