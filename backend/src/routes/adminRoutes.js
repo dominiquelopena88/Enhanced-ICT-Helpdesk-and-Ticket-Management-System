@@ -19,7 +19,8 @@ const {
     addTechnicianSkill,
     removeTechnicianSkill,
     getActiveTickets,
-    getTicketAnalytics
+    getTicketAnalytics,
+    exportTicketAnalytics
 } = require('../controllers/adminController');
 
 const {
@@ -97,6 +98,13 @@ router.get(
     authenticateToken,
     authorizeRoles('administrator'),
     getTicketAnalytics
+);
+
+router.get(
+    '/tickets/analytics/export',
+    authenticateToken,
+    authorizeRoles('administrator'),
+    exportTicketAnalytics
 );
 
 // ============================================================

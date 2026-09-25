@@ -700,6 +700,11 @@ const adminTicketsSection =
         'adminTicketsSection'
     );
 
+const exportAnalyticsButton =
+    document.getElementById(
+        'exportAnalyticsButton'
+    );
+
 
 /*
     ============================================================
@@ -2801,6 +2806,13 @@ async function loadAdminDashboard() {
     await loadAdminTickets();
 
     await loadTicketAnalytics();
+
+    if (exportAnalyticsButton) {
+        exportAnalyticsButton.addEventListener(
+            'click',
+            exportTicketAnalytics
+        );
+    }
 }
 
 
@@ -3964,6 +3976,60 @@ function displayTechnicianWorkload(
 
     `;
 
+}
+
+async function exportTicketAnalytics() {
+    
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/admin/tickets/analytics/export`,
+            {
+                method: 'GET',
+                headers: {
+                    'Authorization':
+                        `Bearer ${localStorage.getItem('token')}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            const data = await response.json();
+
+            throw new Error(
+                data.message ||
+                'Unable to export report.'
+            );
+        }
+
+        const blob = await response.blob();
+
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+
+        link.href = url;
+
+        link.download =
+            'ict-ticket-analytics.csv';
+
+        document.body.appendChild(link);
+
+        link.click();
+
+        link.remove();
+
+        window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+        console.error(
+            'Export analytics error:',
+            error
+        );
+
+        alert(
+            'Unable to export the report.'
+        );
+    }
 }
 
 /*
