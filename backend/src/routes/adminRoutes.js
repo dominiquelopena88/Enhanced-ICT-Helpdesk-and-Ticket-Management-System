@@ -18,7 +18,8 @@ const {
     getTechnicians,
     addTechnicianSkill,
     removeTechnicianSkill,
-    getActiveTickets
+    getActiveTickets,
+    getTicketAnalytics
 } = require('../controllers/adminController');
 
 const {
@@ -91,6 +92,12 @@ router.get(
     getActiveTickets
 );
 
+router.get(
+    '/tickets/analytics',
+    authenticateToken,
+    authorizeRoles('administrator'),
+    getTicketAnalytics
+);
 
 // ============================================================
 // ADMIN - TEST
