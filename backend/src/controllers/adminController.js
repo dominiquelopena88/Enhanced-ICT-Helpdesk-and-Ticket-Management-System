@@ -419,6 +419,117 @@ const getTicketAnalytics = async (req, res) => {
     }
 };
 
+// Export ticket analytics as a CSV report.
+const exportTicketAnalytics = async (req, res) => {
+    try {
+        // Get ticket status breakdown.
+        const [statusBreakdown] = await pool.query(
+            `SELECT
+                status,
+                COUNT(*) AS count
+             FROM tickets
+             GROUP BY status
+             ORDER BY status`
+        );
+
+        // Get ticket category breakdown.
+        const [categoryBreakdown] = await pool.query(
+            `SELECT
+                category,
+                COUNT(*) AS count
+             FROM tickets
+             GROUP BY category
+             ORDER BY category`
+        );
+
+        // Get ticket priority breakdown.
+        const [priorityBreakdown] = await pool.query(
+            `SELECT
+                priority,
+                COUNT(*) AS count
+             FROM tickets
+             GROUP BY priority
+             ORDER BY priority`
+        );
+
+        // Get technician workload.
+        const [technicianWorkload] = await pool.query(
+            `SELECT
+                u.full_name AS technician_name,
+                COUNT(t.id) AS ticket_count
+             FROM users u
+             LEFT JOIN tickets t
+                ON t.assigned_to = u.id
+             WHERE u.role = 'ict_technician'
+             GROUP BY u.id, u.full_name
+             ORDER BY ticket_count DESC, u.full_name ASC`
+        );
+
+        // Get total number of tickets.
+        const [totalTickets] = await pool.query(
+            `SELECT COUNT(*) AS total
+             FROM tickets`
+        );
+
+        let csv = '';
+
+        csv += 'ICT Helpdesk Ticket Analytics Report\n';
+        csv += `Total Tickets,${totalTickets[0].total}\n\n`;
+
+        csv += 'Tickets by Status\n';
+        csv += 'Status,Tickets\n';
+
+        statusBreakdown.forEach(item => {
+            csv += `"${item.status}",${item.count}\n`;
+        });
+
+        csv += '\nTickets by Category\n';
+        csv += 'Category,Tickets\n';
+
+        categoryBreakdown.forEach(item => {
+            csv += `"${item.category}",${item.count}\n`;
+        });
+
+        csv += '\nTickets by Priority\n';
+        csv += 'Priority,Tickets\n';
+
+        priorityBreakdown.forEach(item => {
+            csv += `"${item.priority}",${item.count}\n`;
+        });
+
+        csv += '\nTechnician Workload\n';
+        csv += 'Technician,Assigned Tickets\n';
+
+        technicianWorkload.forEach(item => {
+            csv += `"${item.technician_name}",${item.ticket_count}\n`;
+        });
+
+        // Tell the browser to download the response as a CSV file.
+        res.setHeader(
+            'Content-Type',
+            'text/csv'
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename="ict-ticket-analytics.csv"'
+        );
+
+        res.status(200).send(csv);
+
+    } catch (error) {
+        console.error(
+            'Export ticket analytics error:',
+            error
+        );
+
+        res.status(500).json({
+            message:
+                'An unexpected server error occurred.'
+        });
+    }
+};
+
 module.exports = {
     getAllUsers,
     updateUserRole,
@@ -426,5 +537,6 @@ module.exports = {
     addTechnicianSkill,
     removeTechnicianSkill,
     getActiveTickets,
-    getTicketAnalytics
+    getTicketAnalytics,
+    exportTicketAnalytics
 };
