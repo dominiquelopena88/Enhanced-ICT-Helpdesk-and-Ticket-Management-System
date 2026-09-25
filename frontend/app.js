@@ -695,6 +695,26 @@ const analyticsTechnicianContainer =
         'analyticsTechnicianContainer'
     );    
 
+const analyticsFromDate =
+    document.getElementById(
+        'analyticsFromDate'
+    );
+
+const analyticsToDate =
+    document.getElementById(
+        'analyticsToDate'
+    );
+
+const applyAnalyticsFilter =
+    document.getElementById(
+        'applyAnalyticsFilter'
+    );
+
+const clearAnalyticsFilter =
+    document.getElementById(
+        'clearAnalyticsFilter'
+    );
+
 const adminTicketsSection =
     document.getElementById(
         'adminTicketsSection'
@@ -3713,8 +3733,26 @@ async function loadTicketAnalytics() {
 
     try {
 
+        const fromDate =
+            analyticsFromDate
+                ? analyticsFromDate.value
+                : '';
+
+        const toDate =
+            analyticsToDate
+                ? analyticsToDate.value
+                : '';
+
+        let analyticsUrl =
+            `${API_BASE_URL}/admin/tickets/analytics`;
+
+        if (fromDate && toDate) {
+            analyticsUrl +=
+                `?fromDate=${fromDate}&toDate=${toDate}`;
+        }
+
         const response = await fetch(
-            `${API_BASE_URL}/admin/tickets/analytics`,
+            analyticsUrl,
             {
                 method: 'GET',
 
@@ -4181,6 +4219,30 @@ function displayAdminTickets(
         html;
 }
 
+if (applyAnalyticsFilter) {
+    applyAnalyticsFilter.addEventListener(
+        'click',
+        loadTicketAnalytics
+    );
+}
+
+if (clearAnalyticsFilter) {
+    clearAnalyticsFilter.addEventListener(
+        'click',
+        () => {
+
+            if (analyticsFromDate) {
+                analyticsFromDate.value = '';
+            }
+
+            if (analyticsToDate) {
+                analyticsToDate.value = '';
+            }
+
+            loadTicketAnalytics();
+        }
+    );
+}
 
 /*
     ============================================================
